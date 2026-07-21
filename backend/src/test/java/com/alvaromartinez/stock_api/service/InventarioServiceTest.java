@@ -1,14 +1,12 @@
 package com.alvaromartinez.stock_api.service;
 
-import com.alvaromartinez.stock_api.model.EnUso;
-import com.alvaromartinez.stock_api.model.Inventario;
-import com.alvaromartinez.stock_api.model.Producto;
-import com.alvaromartinez.stock_api.model.Usuario;
+import com.alvaromartinez.stock_api.model.*;
 import com.alvaromartinez.stock_api.repository.EnUsoRepository;
 import com.alvaromartinez.stock_api.repository.InventarioRepository;
 import com.alvaromartinez.stock_api.repository.MovimientoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -68,7 +66,90 @@ public class InventarioServiceTest {
         assertEquals(4, inventario.getCantidad());
 
         verify(inventarioRepository).save(inventario);
+    }
 
+    @Test
+    void entrada_sinInventario_crearInventario() {
+        Usuario usuario = new Usuario();
+        Producto producto = new Producto();
+        ArgumentCaptor<Inventario> captor = ArgumentCaptor.forClass(Inventario.class);
+
+        when(inventarioRepository.findByUsuarioAndProducto(usuario, producto))
+                .thenReturn(Optional.empty());
+
+        inventarioService.entrada(usuario, producto, 5);
+
+        verify(inventarioRepository).save(captor.capture());
+
+        Inventario capturado = captor.getValue();
+
+        assertEquals(5, capturado.getCantidad());
+    }
+
+    @Test
+    void entrada_conInventario() {
+        Usuario usuario = new Usuario();
+        Producto producto = new Producto();
+        Inventario inventario = new Inventario(null, usuario, producto, 5);
+
+        when(inventarioRepository.findByUsuarioAndProducto(usuario, producto))
+                .thenReturn(Optional.of(inventario));
+
+        when(inventarioRepository.save(inventario)).thenReturn(inventario);
+
+        Inventario resultado = inventarioService.entrada(usuario, producto, 1);
+
+        verify(inventarioRepository).save(resultado);
+
+        assertEquals(6, resultado.getCantidad());
+    }
+
+    @Test
+    void venta_sinInventario() {
+        Usuario usuario = new Usuario();
+        Producto producto = new Producto();
+
+
+        when(inventarioRepository.findByUsuarioAndProducto(usuario, producto))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> inventarioService.venta(usuario, producto, 5, BigDecimal.valueOf(10)));
+    }
+
+    @Test
+    void venta_fueraDeLimites() {
+        Usuario usuario = new Usuario();
+        Producto producto = new Producto();
+        Inventario inventario = new Inventario(null, usuario, producto, 5);
+
+        when(inventarioRepository.findByUsuarioAndProducto(usuario, producto))
+                .thenReturn(Optional.of(inventario));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> inventarioService.venta(usuario, producto, 10, BigDecimal.valueOf(10)));
+    }
+
+    @Test
+    void venta_ok() {
+        Usuario usuario = new Usuario();
+        Producto producto = new Producto();
+        Inventario inventario = new Inventario(null, usuario, producto, 5);
+        ArgumentCaptor<Movimiento> captor = ArgumentCaptor.forClass(Movimiento.class);
+
+        when(inventarioRepository.findByUsuarioAndProducto(usuario, producto))
+                .thenReturn(Optional.of(inventario));
+
+
+        inventario = inventarioService.venta(usuario, producto, 3, BigDecimal.valueOf(10));
+
+        // movimiento
+        verify(movimientoRepository).save(captor.capture());
+        Movimiento capturado = captor.getValue();
+        assertEquals(BigDecimal.valueOf(3), capturado.getCantidad());
+
+        // restar al stock
+        assertEquals(2, inventario.getCantidad());
 
     }
 
