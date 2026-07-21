@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -151,6 +152,31 @@ public class InventarioServiceTest {
         // restar al stock
         assertEquals(2, inventario.getCantidad());
 
+    }
+
+    @Test
+    void consumirGramos_fueraDeLimites() {
+        Usuario usuario = new Usuario();
+        Producto producto = new Producto();
+        EnUso uso = new EnUso(null, usuario, producto, BigDecimal.valueOf(1000), LocalDate.now());
+
+        assertThrows(IllegalArgumentException.class, () -> inventarioService.consumirGramos(uso, BigDecimal.valueOf(1100)));
+    }
+
+    @Test
+    void consumirGramos_ok() {
+        Usuario usuario = new Usuario();
+        Producto producto = new Producto();
+        EnUso uso = new EnUso(null, usuario, producto, BigDecimal.valueOf(1000), LocalDate.now());
+        ArgumentCaptor<Movimiento> captor = ArgumentCaptor.forClass(Movimiento.class);
+
+        inventarioService.consumirGramos(uso, BigDecimal.valueOf(500));
+
+        verify(movimientoRepository).save(captor.capture());
+        Movimiento mov = captor.getValue();
+        assertEquals(new BigDecimal(500), mov.getCantidad());
+
+        assertEquals(new BigDecimal(500), uso.getGramosRestantes());
     }
 
 
