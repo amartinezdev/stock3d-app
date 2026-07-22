@@ -1,5 +1,6 @@
 package com.alvaromartinez.stock_api.service;
 
+import com.alvaromartinez.stock_api.model.Categoria;
 import com.alvaromartinez.stock_api.model.Producto;
 import com.alvaromartinez.stock_api.repository.ProductoRepository;
 import org.junit.jupiter.api.Test;
@@ -7,7 +8,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -103,6 +108,36 @@ public class ProductoServiceTest {
         verify(productoRepository, never()).deleteById(producto.getId());
 
         assertFalse(resultado);
+    }
+
+    @Test
+    void listar_conCategoria() {
+        Categoria categoria = Categoria.PLA;
+        Pageable page = Pageable.unpaged();
+        Producto producto = new Producto();
+
+        Page<Producto> pagina = new PageImpl<>(List.of(producto));
+
+        when(productoRepository.findByCategoria(categoria, page)).thenReturn(pagina);
+
+        Page<Producto> resultado = productoService.listar(categoria, page);
+
+        assertEquals(resultado.getContent(), pagina.getContent());
+    }
+
+    @Test
+    void listar_sinCategoria() {
+        Categoria categoria = null;
+        Pageable page = Pageable.unpaged();
+        Producto producto = new Producto();
+
+        Page<Producto> pagina = new PageImpl<>(List.of(producto));
+
+        when(productoRepository.findAll(page)).thenReturn(pagina);
+
+        Page<Producto> resultado = productoService.listar(categoria, page);
+
+        assertEquals(resultado.getContent(), pagina.getContent());
     }
 }
 
