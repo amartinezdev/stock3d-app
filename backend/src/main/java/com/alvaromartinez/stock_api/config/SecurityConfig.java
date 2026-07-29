@@ -55,7 +55,7 @@ public class SecurityConfig {
                         // anyRequest().authenticated(), porque Spring Security
                         // evalúa las reglas en orden y se queda con la primera
                         // que haga match.
-                        .requestMatchers("/registrar", "/login").permitAll()
+                        .requestMatchers("/registrar", "/login", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // Restricción por ROL, no solo por ruta: mismo path que el
                         // GET de listar/obtener (abierto a cualquier autenticado más
                         // abajo), pero solo ADMIN puede crear/actualizar/borrar

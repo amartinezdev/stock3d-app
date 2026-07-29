@@ -4,6 +4,8 @@ import com.alvaromartinez.stock_api.dto.ProductoDTO;
 import com.alvaromartinez.stock_api.model.Categoria;
 import com.alvaromartinez.stock_api.model.Producto;
 import com.alvaromartinez.stock_api.service.ProductoService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,6 +39,8 @@ public class ProductoController {
      * @return 200 con la página pedida: su contenido más los metadatos
      * (totalElements, totalPages...).
      */
+    @Operation(summary = "Lista productos del catálogo", description = "Devuelve el catálogo paginado, opcionalmente filtrado por categoría.")
+    @ApiResponse(responseCode = "200", description = "Página de productos devuelta correctamente.")
     @GetMapping("/productos")
     public ResponseEntity<Page<Producto>> listar(@RequestParam(required = false) Categoria categoria, Pageable pageable) {
         return ResponseEntity.ok(productoService.listar(categoria, pageable));
@@ -48,6 +52,8 @@ public class ProductoController {
      * @param id id del producto (@PathVariable: sale del trozo {id} de la URL).
      * @return 200 con el producto de ese id.
      */
+    @Operation(summary = "Obtiene el detalle de un producto por su id")
+    @ApiResponse(responseCode = "200", description = "Producto encontrado.")
     @GetMapping("/productos/{id}")
     public ResponseEntity<Producto> obtenerPorId(@PathVariable Long id) {
         return ResponseEntity.ok(productoService.obtenerPorId(id));
@@ -61,6 +67,10 @@ public class ProductoController {
      * @param productoDTO datos del producto, convertidos del JSON por @RequestBody.
      * @return 201 (creado) con el producto ya guardado, con su id generado.
      */
+    @Operation(summary = "Crea un producto en el catálogo", description = "Requiere rol ADMIN.")
+    @ApiResponse(responseCode = "201", description = "Producto creado correctamente.")
+    @ApiResponse(responseCode = "400", description = "Datos del producto inválidos (validación de campos).")
+    @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene rol ADMIN.")
     @PostMapping("/productos")
     public ResponseEntity<Producto> crear(@Valid @RequestBody ProductoDTO productoDTO) {
         Producto producto = new Producto(null, productoDTO.nombre(), productoDTO.descripcion(), productoDTO.precio(), productoDTO.categoria(), productoDTO.pesoRollo());
@@ -78,6 +88,11 @@ public class ProductoController {
      * @param productoDTO datos nuevos, validados con @Valid.
      * @return 200 con el producto actualizado, o 404 si ese id no existe.
      */
+    @Operation(summary = "Actualiza un producto existente", description = "Requiere rol ADMIN.")
+    @ApiResponse(responseCode = "200", description = "Producto actualizado correctamente.")
+    @ApiResponse(responseCode = "400", description = "Datos del producto inválidos (validación de campos).")
+    @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene rol ADMIN.")
+    @ApiResponse(responseCode = "404", description = "No existe ningún producto con ese id.")
     @PutMapping("/productos/{id}")
     public ResponseEntity<Producto> actualizar(@PathVariable Long id, @Valid @RequestBody ProductoDTO productoDTO) {
         Producto producto = new Producto(id, productoDTO.nombre(), productoDTO.descripcion(), productoDTO.precio(), productoDTO.categoria(), productoDTO.pesoRollo());
@@ -95,6 +110,10 @@ public class ProductoController {
      * @param id id del producto a borrar (de la URL).
      * @return 204 sin contenido si se ha borrado; 404 si no existía.
      */
+    @Operation(summary = "Borra un producto del catálogo", description = "Requiere rol ADMIN.")
+    @ApiResponse(responseCode = "204", description = "Producto borrado correctamente.")
+    @ApiResponse(responseCode = "403", description = "El usuario autenticado no tiene rol ADMIN.")
+    @ApiResponse(responseCode = "404", description = "No existe ningún producto con ese id.")
     @DeleteMapping("/productos/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         if (productoService.eliminar(id)) {

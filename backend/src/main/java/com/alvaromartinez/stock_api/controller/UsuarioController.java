@@ -5,6 +5,8 @@ import com.alvaromartinez.stock_api.dto.RegistroDTO;
 import com.alvaromartinez.stock_api.dto.TokenResponseDTO;
 import com.alvaromartinez.stock_api.dto.UsuarioResponseDTO;
 import com.alvaromartinez.stock_api.service.UsuarioService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +39,9 @@ public class UsuarioController {
      * @return 201 (creado) con el usuario guardado como UsuarioResponseDTO,
      * sin el hash de la contraseña.
      */
+    @Operation(summary = "Registra una cuenta nueva", description = "El rol se asigna siempre como USER; no se puede elegir desde el cliente.")
+    @ApiResponse(responseCode = "201", description = "Usuario creado correctamente.")
+    @ApiResponse(responseCode = "400", description = "Datos inválidos, o el userName/email ya existen.")
     @PostMapping("/registrar")
     public ResponseEntity<UsuarioResponseDTO> registrar(@Valid @RequestBody RegistroDTO registroDTO) {
         UsuarioResponseDTO user = usuarioService.registrar(registroDTO);
@@ -54,6 +59,9 @@ public class UsuarioController {
      * @param loginDTO userName y password en texto plano, validados con @Valid.
      * @return 200 con el token JWT (TokenResponseDTO).
      */
+    @Operation(summary = "Inicia sesión y devuelve un JWT", description = "El mensaje de error es el mismo tanto si el usuario no existe como si la contraseña es incorrecta, para no revelar qué userName existen.")
+    @ApiResponse(responseCode = "200", description = "Login correcto; el token va en el cuerpo de la respuesta.")
+    @ApiResponse(responseCode = "400", description = "Usuario o contraseña incorrectos, o campos vacíos.")
     @PostMapping("/login")
     public ResponseEntity<TokenResponseDTO> loguear(@Valid @RequestBody LoginDTO loginDTO) {
         TokenResponseDTO token = usuarioService.verificar(loginDTO);
