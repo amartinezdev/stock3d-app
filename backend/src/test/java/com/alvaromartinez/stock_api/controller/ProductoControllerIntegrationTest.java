@@ -111,7 +111,7 @@ public class ProductoControllerIntegrationTest {
 
         productoRepository.save(pro);
 
-        mockMvc.perform(delete("/productos/{id}", 1L)
+        mockMvc.perform(delete("/productos/{id}", pro.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
     }
@@ -124,7 +124,7 @@ public class ProductoControllerIntegrationTest {
 
         productoRepository.save(pro);
 
-        mockMvc.perform(delete("/productos/{id}", 1L)
+        mockMvc.perform(delete("/productos/{id}", pro.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
@@ -136,7 +136,7 @@ public class ProductoControllerIntegrationTest {
 
         productoRepository.save(pro);
 
-        mockMvc.perform(delete("/productos/{id}", 1L))
+        mockMvc.perform(delete("/productos/{id}", pro.getId()))
                 .andExpect(status().isForbidden());
     }
 }
