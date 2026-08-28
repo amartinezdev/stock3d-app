@@ -74,7 +74,7 @@ public class SecurityConfig {
                         // evalúa las reglas en orden y se queda con la primera
                         // que haga match.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // CORS preflight
-                        .requestMatchers("/registrar", "/login", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/registrar", "/login", "/productos", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // Restricción por ROL, no solo por ruta: mismo path que el
                         // GET de listar/obtener (abierto a cualquier autenticado más
                         // abajo), pero solo ADMIN puede crear/actualizar/borrar
