@@ -1,0 +1,103 @@
+/* ---------- Tarjetas de cifras ---------- */
+.estadistica {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.15rem 1.25rem;
+}
+
+.cifra {
+  font-size: 1.75rem;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+/* Cuadradito de color que envuelve el icono de cada cifra. */
+.chip {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: none;
+  border-radius: 0.55rem;
+  background: hsl(var(--apagado));
+  color: hsl(var(--apagado-texto));
+}
+
+.chip-primario { background: hsl(var(--primario-suave)); color: hsl(var(--primario)); }
+.chip-info { background: hsl(var(--info-suave)); color: hsl(var(--info)); }
+.chip-exito { background: hsl(var(--exito-suave)); color: hsl(var(--exito)); }
+.chip-aviso { background: hsl(var(--aviso-suave)); color: hsl(var(--aviso)); }
+
+/* ---------- Gráfico de barras ---------- */
+.grafico {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.4rem;
+  height: 12rem;
+}
+
+.grafico-columna {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.grafico-hueco {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  flex: 1;
+}
+
+.grafico-barra {
+  width: 100%;
+  border-radius: 0.3rem 0.3rem 0.15rem 0.15rem;
+  background: linear-gradient(180deg, hsl(var(--primario)), hsl(var(--primario) / 0.45));
+  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1), filter 0.15s ease;
+}
+
+.grafico-columna:hover .grafico-barra { filter: brightness(1.15); }
+
+/* Los días sin consumo se marcan con una rayita, no con nada: así se ve
+   que ese día existe y simplemente no hubo actividad. */
+.grafico-barra.vacia {
+  height: 2px !important;
+  background: hsl(var(--borde-fuerte));
+}
+
+.grafico-etiqueta {
+  font-size: 0.65rem;
+  color: hsl(var(--apagado-texto));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ---------- Lista de actividad ---------- */
+.actividad {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.actividad li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1.25rem;
+  border-bottom: 1px solid hsl(var(--borde));
+}
+
+.actividad li:last-child { border-bottom: 0; }
+
+@media (max-width: 640px) {
+  .grafico { height: 9rem; }
+  .grafico-etiqueta { display: none; }
+}

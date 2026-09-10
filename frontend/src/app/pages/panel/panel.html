@@ -1,0 +1,219 @@
+<div class="pagina">
+  <header class="pagina-cabecera">
+    <div>
+      <h1>Panel</h1>
+      <p>Cómo está tu stock ahora mismo.</p>
+    </div>
+
+    <a class="btn btn-primario" routerLink="/inventario">
+      <app-icono nombre="mas" tamano="sm" />
+      Registrar entrada
+    </a>
+  </header>
+
+  @if (cargando()) {
+    <div class="rejilla rejilla-4">
+      @for (hueco of [1, 2, 3, 4]; track hueco) {
+        <div class="tarjeta tarjeta-cuerpo">
+          <div class="esqueleto" style="height: 0.8rem; width: 45%"></div>
+          <div class="esqueleto" style="height: 2rem; width: 65%; margin-top: 0.85rem"></div>
+        </div>
+      }
+    </div>
+    <div class="tarjeta tarjeta-cuerpo">
+      <div class="esqueleto" style="height: 12rem"></div>
+    </div>
+  } @else if (sinDatos()) {
+    <div class="tarjeta">
+      <div class="vacio">
+        <span class="vacio-icono">
+          <app-icono nombre="caja" tamano="lg" />
+        </span>
+        <h3>Todavía no hay nada en tu inventario</h3>
+        <p>
+          Empieza registrando una entrada de rollos: elige un producto del catálogo e
+          indica cuántos has comprado. A partir de ahí podrás abrirlos, consumir gramos
+          y anotar ventas.
+        </p>
+        <div class="fila" style="margin-top: 0.5rem">
+          <a class="btn btn-primario" routerLink="/inventario">
+            <app-icono nombre="mas" tamano="sm" />
+            Registrar entrada
+          </a>
+          <a class="btn btn-contorno" routerLink="/productos">Ver catálogo</a>
+        </div>
+      </div>
+    </div>
+  } @else if (resumen(); as datos) {
+    <!-- ---------- Cifras principales ---------- -->
+    <div class="rejilla rejilla-4">
+      <article class="tarjeta estadistica">
+        <div class="fila-sep">
+          <span class="pequeno apagado">Rollos cerrados</span>
+          <span class="chip chip-primario"><app-icono nombre="caja" tamano="sm" /></span>
+        </div>
+        <strong class="cifra numero">{{ datos.rollosCerrados }}</strong>
+        <span class="pequeno apagado">{{ datos.productosDistintos }} producto(s) distinto(s)</span>
+      </article>
+
+      <article class="tarjeta estadistica">
+        <div class="fila-sep">
+          <span class="pequeno apagado">Rollos en uso</span>
+          <span class="chip chip-info"><app-icono nombre="bobina" tamano="sm" /></span>
+        </div>
+        <strong class="cifra numero">{{ datos.rollosAbiertos }}</strong>
+        <span class="pequeno apagado">{{ datos.gramosDisponibles | number: '1.0-0' }} g disponibles</span>
+      </article>
+
+      <article class="tarjeta estadistica">
+        <div class="fila-sep">
+          <span class="pequeno apagado">Valor del inventario</span>
+          <span class="chip chip-exito"><app-icono nombre="euro" tamano="sm" /></span>
+        </div>
+        <strong class="cifra numero">{{ datos.valorInventario | currency: 'EUR' }}</strong>
+        <span class="pequeno apagado">A precio de catálogo</span>
+      </article>
+
+      <article class="tarjeta estadistica">
+        <div class="fila-sep">
+          <span class="pequeno apagado">Ingresos por ventas</span>
+          <span class="chip chip-aviso"><app-icono nombre="etiqueta" tamano="sm" /></span>
+        </div>
+        <strong class="cifra numero">{{ datos.ingresosTotales | currency: 'EUR' }}</strong>
+        <span class="pequeno apagado">Histórico completo</span>
+      </article>
+    </div>
+
+    <div class="rejilla rejilla-2">
+      <!-- ---------- Gráfico de consumo ---------- -->
+      <section class="tarjeta">
+        <div class="tarjeta-cabecera">
+          <div>
+            <h2 class="tarjeta-titulo">Consumo de filamento</h2>
+            <p class="tarjeta-sub">Gramos gastados en los últimos 14 días</p>
+          </div>
+          <span class="badge badge-neutro">
+            {{ consumoSemana() | number: '1.0-0' }} g esta semana
+          </span>
+        </div>
+
+        <div class="tarjeta-cuerpo">
+          @if (datos.gramosConsumidos === 0) {
+            <p class="apagado pequeno centrado" style="padding: 2.5rem 0">
+              Aún no has consumido gramos de ningún rollo abierto.
+            </p>
+          } @else {
+            <div class="grafico" role="img" aria-label="Consumo diario de filamento">
+              @for (barra of grafico(); track barra.dia) {
+                <div class="grafico-columna" [title]="barra.etiqueta + ': ' + barra.gramos + ' g'">
+                  <div class="grafico-hueco">
+                    <div
+                      class="grafico-barra"
+                      [class.vacia]="barra.gramos === 0"
+                      [style.height.%]="barra.altura"
+                    ></div>
+                  </div>
+                  <span class="grafico-etiqueta">{{ barra.etiqueta }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- ---------- Rollos por agotarse ---------- -->
+      <section class="tarjeta">
+        <div class="tarjeta-cabecera">
+          <div>
+            <h2 class="tarjeta-titulo">Se están acabando</h2>
+            <p class="tarjeta-sub">Material en uso con menos gramos</p>
+          </div>
+          <a class="btn btn-fantasma btn-sm" routerLink="/en-uso">Ver todos</a>
+        </div>
+
+        <div class="tarjeta-cuerpo columna" style="gap: 1rem">
+          @for (rollo of porAgotarse(); track rollo.id) {
+            <div class="columna" style="gap: 0.4rem">
+              <div class="fila-sep">
+                <span class="pequeno">{{ rollo.producto.nombre }}</span>
+                <span class="pequeno apagado numero">{{ rollo.gramosRestantes | gramos }}</span>
+              </div>
+              <div class="progreso">
+                <div
+                  class="progreso-barra"
+                  [class.bajo]="rollo.porcentaje < 25"
+                  [style.width.%]="rollo.porcentaje"
+                ></div>
+              </div>
+            </div>
+          } @empty {
+            <p class="apagado pequeno centrado" style="padding: 2rem 0">
+              No tienes ningún rollo en uso ahora mismo.
+            </p>
+          }
+        </div>
+      </section>
+    </div>
+
+    <!-- ---------- Actividad reciente ---------- -->
+    <section class="tarjeta">
+      <div class="tarjeta-cabecera">
+        <div>
+          <h2 class="tarjeta-titulo">Actividad reciente</h2>
+          <p class="tarjeta-sub">Últimos movimientos registrados</p>
+        </div>
+        <a class="btn btn-fantasma btn-sm" routerLink="/movimientos">Ver histórico</a>
+      </div>
+
+      <ul class="actividad">
+        @for (movimiento of ultimos(); track movimiento.id) {
+          <li>
+            <span
+              class="chip"
+              [class.chip-exito]="movimiento.tipo === 'ENTRADA'"
+              [class.chip-aviso]="movimiento.tipo === 'SALIDA_VENTA'"
+              [class.chip-info]="movimiento.tipo === 'SALIDA_USO'"
+            >
+              <app-icono
+                [nombre]="
+                  movimiento.tipo === 'ENTRADA'
+                    ? 'caja'
+                    : movimiento.tipo === 'SALIDA_VENTA'
+                      ? 'etiqueta'
+                      : 'bobina'
+                "
+                tamano="sm"
+              />
+            </span>
+
+            <span class="columna crece">
+              <span class="pequeno">
+                <strong>{{ etiquetaTipo(movimiento.tipo) }}</strong> · {{ movimiento.producto.nombre }}
+              </span>
+              <span class="pequeno apagado">{{ movimiento.fecha | date: 'd MMM, HH:mm' }}</span>
+            </span>
+
+            <span class="derecha columna">
+              <span class="pequeno numero">
+                @if (movimiento.tipo === 'SALIDA_USO') {
+                  {{ movimiento.cantidad | gramos }}
+                } @else {
+                  {{ movimiento.cantidad | number: '1.0-0' }} rollo(s)
+                }
+              </span>
+              @if (movimiento.precio !== null) {
+                <span class="pequeno apagado numero">
+                  {{ (movimiento.precio ?? 0) * movimiento.cantidad | currency: 'EUR' }}
+                </span>
+              }
+            </span>
+          </li>
+        } @empty {
+          <li class="apagado pequeno centrado" style="padding: 1.5rem; justify-content: center">
+            Todavía no hay movimientos.
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</div>
