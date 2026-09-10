@@ -1,0 +1,75 @@
+# =====================================================================
+# Los tres contenedores que forman la aplicación en producción.
+#
+#   web  -> Caddy: HTTPS, sirve el Angular y reparte /api a la API.
+#   api  -> Spring Boot.
+#   db   -> PostgreSQL.
+#
+# Solo "web" publica puertos al exterior. La API y la base de datos se
+# hablan por la red interna de Docker y NO son accesibles desde internet:
+# la única puerta de entrada es el proxy.
+#
+# Arrancar:  docker compose up -d --build
+# Ver logs:  docker compose logs -f api
+# Parar:     docker compose down          (los datos sobreviven)
+# =====================================================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stockdb}
+      POSTGRES_USER: ${DB_USERNAME:?falta DB_USERNAME en el .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD en el .env}
+    volumes:
+      # Volumen con nombre: los datos viven fuera del contenedor y
+      # sobreviven a cualquier reconstrucción de la imagen.
+      - datos-postgres:/var/lib/postgresql/data
+    healthcheck:
+      # La API espera a que esto pase: si arrancara antes de que Postgres
+      # aceptase conexiones, Flyway fallaría y el contenedor moriría.
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME} -d ${POSTGRES_DB:-stockdb}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # "db" es el nombre del servicio de arriba: dentro de la red de
+      # Docker funciona como nombre de host. Por eso la URL de la base de
+      # datos tenía que salir a una variable y no quedarse en localhost.
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-stockdb}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET en el .env}
+      # Vacío a propósito: el navegador llama al mismo dominio que sirve la
+      # web, así que no hay petición entre orígenes y CORS no interviene.
+      CORS_ORIGENES: ''
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      DOMINIO: ${DOMINIO:-localhost}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      # Los certificados de Let's Encrypt: sin persistirlos, cada reinicio
+      # pediría unos nuevos y Let's Encrypt tiene límites de peticiones.
+      - caddy-datos:/data
+      - caddy-config:/config
+
+volumes:
+  datos-postgres:
+  caddy-datos:
+  caddy-config:

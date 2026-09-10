@@ -1,0 +1,7 @@
+# Los .class y el .jar de la compilación local no pintan nada en la imagen:
+# dentro se compila de cero, a partir del código fuente.
+target
+.idea
+*.iml
+.claude
+*.log

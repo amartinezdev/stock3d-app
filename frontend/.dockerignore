@@ -1,0 +1,9 @@
+# node_modules NO se copia: dentro de la imagen se instala con npm ci, y
+# meter el de Windows machacaría esa instalación con binarios que no
+# sirven en Linux (además de mandar cientos de megas al demonio de Docker).
+node_modules
+dist
+.angular
+.vscode
+.idea
+*.log

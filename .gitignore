@@ -1,0 +1,10 @@
+# Secretos de despliegue: la plantilla (.env.example) sí se sube, el .env
+# con los valores reales jamás.
+.env
+.env.*
+!.env.example
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+*.swp

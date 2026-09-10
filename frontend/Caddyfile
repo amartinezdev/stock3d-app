@@ -1,0 +1,47 @@
+# =====================================================================
+# Configuración del proxy inverso / servidor web.
+#
+# {$DOMINIO:localhost} lo rellena docker-compose desde el .env. Cuando es
+# un dominio real, Caddy pide y renueva SOLO el certificado de Let's
+# Encrypt (HTTPS sin tocar nada); con "localhost" usa un certificado
+# local, útil para probar el montaje entero antes de subirlo.
+# =====================================================================
+
+{$DOMINIO:localhost} {
+	# Comprime las respuestas antes de enviarlas.
+	encode zstd gzip
+
+	# --- La API ---
+	# handle_path QUITA el prefijo antes de reenviar: el navegador pide
+	# /api/productos y el backend recibe /productos, que es la ruta que
+	# de verdad tiene. Es el mismo truco que hace proxy.conf.json en
+	# desarrollo, para que el frontend use la misma URL en los dos sitios.
+	handle_path /api/* {
+		reverse_proxy api:8080
+	}
+
+	# --- La aplicación Angular ---
+	handle {
+		root * /srv
+
+		# Los ficheros con hash en el nombre (main-4KU2OW3V.js) nunca
+		# cambian de contenido: se pueden cachear un año entero.
+		@conHash path_regexp \-[A-Z0-9]{8}\.(js|css)$
+		header @conHash Cache-Control "public, max-age=31536000, immutable"
+
+		# La pieza clave de una SPA: si la ruta pedida no es un fichero
+		# real, se devuelve index.html y el router de Angular decide qué
+		# pintar. Sin esto, recargar la página estando en /inventario
+		# daría un 404 del servidor.
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Cabeceras de seguridad básicas.
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
