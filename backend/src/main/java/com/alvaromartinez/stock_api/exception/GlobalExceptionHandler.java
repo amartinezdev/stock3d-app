@@ -1,6 +1,7 @@
 package com.alvaromartinez.stock_api.exception;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -39,7 +40,15 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> manejarValidacion(MethodArgumentNotValidException ex) {
-        String mensaje = ex.getBindingResult().getFieldError().getDefaultMessage();
+        // getFieldError() devuelve null si el fallo no es de un campo
+        // concreto sino del objeto entero (una validación a nivel de clase):
+        // sin este respaldo, el manejador de errores petaría con un
+        // NullPointerException y el cliente recibiría un 500 en vez del 400.
+        String mensaje = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(FieldError::getDefaultMessage)
+                .orElse("Los datos enviados no son válidos.");
+
         ErrorResponse error = new ErrorResponse(mensaje, 400, LocalDateTime.now());
         return ResponseEntity.badRequest().body(error);
     }

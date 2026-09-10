@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -55,9 +56,26 @@ public class ProductoControllerIntegrationTest {
     void obtener_porId() throws Exception {
         String token = jwtUtil.generarToken("123", "USER");
 
-        mockMvc.perform(get("/productos/{id}", 1L)
+        // Se crea el producto y se pide POR SU ID REAL. Antes este test
+        // pedía el id 1 sin haberlo creado y aun así esperaba un 200: lo
+        // que comprobaba en realidad era el bug de devolver 200 con el
+        // cuerpo vacío cuando el producto no existe.
+        Producto pro = productoRepository.save(
+                new Producto(null, "Patatas", "descripcion", BigDecimal.valueOf(10), Categoria.PLA, BigDecimal.valueOf(1)));
+
+        mockMvc.perform(get("/productos/{id}", pro.getId())
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Patatas"));
+    }
+
+    @Test
+    void obtener_porId_inexistente() throws Exception {
+        String token = jwtUtil.generarToken("123", "USER");
+
+        mockMvc.perform(get("/productos/{id}", 999999L)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
     }
 
     @Test

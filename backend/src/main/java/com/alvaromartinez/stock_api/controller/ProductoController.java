@@ -54,9 +54,19 @@ public class ProductoController {
      */
     @Operation(summary = "Obtiene el detalle de un producto por su id")
     @ApiResponse(responseCode = "200", description = "Producto encontrado.")
+    @ApiResponse(responseCode = "404", description = "No existe ningún producto con ese id.")
     @GetMapping("/productos/{id}")
     public ResponseEntity<Producto> obtenerPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(productoService.obtenerPorId(id));
+        Producto producto = productoService.obtenerPorId(id);
+
+        // El Service devuelve null cuando no existe: sin esta comprobación
+        // la respuesta era un 200 con el cuerpo vacío, que para un cliente
+        // significa "existe y no tiene datos" en vez de "no existe".
+        if (producto == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(producto);
     }
 
     /**
