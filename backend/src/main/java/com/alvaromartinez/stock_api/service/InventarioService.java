@@ -1,15 +1,20 @@
 package com.alvaromartinez.stock_api.service;
 
+import com.alvaromartinez.stock_api.dto.ResumenDTO;
 import com.alvaromartinez.stock_api.model.*;
 import com.alvaromartinez.stock_api.repository.EnUsoRepository;
 import com.alvaromartinez.stock_api.repository.InventarioRepository;
 import com.alvaromartinez.stock_api.repository.MovimientoRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * Lógica de negocio de todas las operaciones de stock: entrada, abrir rollo,
@@ -147,5 +152,102 @@ public class InventarioService {
             throw new IllegalArgumentException("No se ha encontrado en tu inventario");
         }
 
+    }
+
+    // ------------------------------------------------------------------
+    // Lecturas (solo consultan, no modifican nada). Las escribe el mismo
+    // Service porque comparten los tres repositories, y así el controller
+    // sigue sin hablar nunca directamente con la capa de datos.
+    // ------------------------------------------------------------------
+
+    /**
+     * Rollos CERRADOS que tiene un usuario, ordenados por nombre de producto.
+     *
+     * @param usuario dueño del inventario.
+     * @return sus filas de Inventario (puede incluir filas con cantidad 0,
+     * de productos que llegó a tener y ya no).
+     */
+    public List<Inventario> listarInventario(Usuario usuario) {
+        return inventarioRepository.findByUsuarioOrderByProductoNombreAsc(usuario);
+    }
+
+    /**
+     * Rollos ABIERTOS de un usuario, del más reciente al más antiguo.
+     *
+     * @param usuario dueño de los rollos.
+     * @return sus filas de EnUso, agotadas incluidas (gramosRestantes = 0).
+     */
+    public List<EnUso> listarEnUso(Usuario usuario) {
+        return enUsoRepository.findByUsuarioOrderByFechaAperturaDescIdDesc(usuario);
+    }
+
+    /**
+     * Histórico de movimientos de un usuario, paginado.
+     *
+     * @param usuario  dueño de los movimientos.
+     * @param tipo     filtro opcional; null = todos los tipos.
+     * @param pageable página/tamaño/orden pedidos en la URL.
+     * @return la página de movimientos con sus metadatos.
+     */
+    public Page<Movimiento> listarMovimientos(Usuario usuario, TipoMovimiento tipo, Pageable pageable) {
+        if (tipo == null) {
+            return movimientoRepository.findByUsuario(usuario, pageable);
+        }
+        return movimientoRepository.findByUsuarioAndTipo(usuario, tipo, pageable);
+    }
+
+    /**
+     * Cifras agregadas del panel principal. Se calculan al vuelo cada vez a
+     * partir de las tres tablas: ningún total se guarda en BBDD, así no hay
+     * forma de que el resumen se desincronice de los datos reales.
+     * Los rollos abiertos con 0 gramos no cuentan como "abiertos" ni suman
+     * gramos: están agotados aunque su fila siga existiendo como histórico.
+     *
+     * @param usuario usuario del que se resume el stock.
+     * @return el resumen listo para pintar en el frontend.
+     */
+    public ResumenDTO resumen(Usuario usuario) {
+        List<Inventario> inventario = listarInventario(usuario);
+        List<Movimiento> movimientos = movimientoRepository.findByUsuario(usuario);
+
+        List<EnUso> abiertos = listarEnUso(usuario).stream()
+                .filter(uso -> uso.getGramosRestantes().compareTo(BigDecimal.ZERO) > 0)
+                .toList();
+
+        int rollosCerrados = inventario.stream()
+                .mapToInt(Inventario::getCantidad)
+                .sum();
+
+        // reduce(ZERO, add) en vez de sum(): BigDecimal no es un tipo
+        // primitivo, no existe mapToBigDecimal().
+        BigDecimal valorInventario = inventario.stream()
+                .map(inv -> inv.getProducto().getPrecio().multiply(BigDecimal.valueOf(inv.getCantidad())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal gramosDisponibles = abiertos.stream()
+                .map(EnUso::getGramosRestantes)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Se comparan ids de producto, no objetos Producto: dos entidades
+        // cargadas en consultas distintas pueden ser instancias diferentes
+        // de la misma fila, y distinct() usa equals().
+        long productosDistintos = Stream.concat(
+                        inventario.stream().filter(inv -> inv.getCantidad() > 0).map(inv -> inv.getProducto().getId()),
+                        abiertos.stream().map(uso -> uso.getProducto().getId()))
+                .distinct()
+                .count();
+
+        BigDecimal ingresosTotales = movimientos.stream()
+                .filter(mov -> mov.getTipo() == TipoMovimiento.SALIDA_VENTA && mov.getPrecio() != null)
+                .map(mov -> mov.getPrecio().multiply(mov.getCantidad()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal gramosConsumidos = movimientos.stream()
+                .filter(mov -> mov.getTipo() == TipoMovimiento.SALIDA_USO)
+                .map(Movimiento::getCantidad)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return new ResumenDTO(rollosCerrados, abiertos.size(), productosDistintos,
+                gramosDisponibles, valorInventario, ingresosTotales, gramosConsumidos);
     }
 }

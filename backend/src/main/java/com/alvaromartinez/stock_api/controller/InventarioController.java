@@ -14,10 +14,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -203,5 +205,74 @@ public class InventarioController {
         return ResponseEntity.ok(venta);
 
 
+    }
+
+    // ------------------------------------------------------------------
+    // Lecturas del stock propio. Ninguna recibe un id de usuario por la
+    // URL: siempre devuelven lo del usuario del JWT, así no hay forma de
+    // pedir el inventario de otra persona cambiando un número.
+    // ------------------------------------------------------------------
+
+    /**
+     * GET /inventario - rollos CERRADOS del usuario autenticado.
+     *
+     * @return 200 con la lista (vacía si aún no tiene nada), ordenada por
+     * nombre de producto.
+     */
+    @Operation(summary = "Lista el inventario de rollos cerrados del usuario autenticado", description = "Siempre devuelve el inventario del usuario del JWT; no admite pedir el de otro usuario.")
+    @ApiResponse(responseCode = "200", description = "Inventario devuelto correctamente.")
+    @GetMapping("/inventario")
+    public ResponseEntity<List<InventarioItemDTO>> listarInventario(Authentication auth) {
+        Usuario usuario = usuarioAutenticado(auth);
+
+        List<InventarioItemDTO> inventario = inventarioService.listarInventario(usuario).stream()
+                .map(inv -> new InventarioItemDTO(inv.getId(), inv.getProducto(), inv.getCantidad()))
+                .toList();
+
+        return ResponseEntity.ok(inventario);
+    }
+
+    /**
+     * GET /inventario/enUso - rollos ABIERTOS del usuario autenticado. Se
+     * devuelven también los agotados (0 gramos): el frontend decide si los
+     * oculta, pero el dato existe.
+     *
+     * @return 200 con la lista, del rollo más recién abierto al más antiguo.
+     */
+    @Operation(summary = "Lista los rollos abiertos del usuario autenticado", description = "Incluye los rollos ya agotados (0 gramos restantes).")
+    @ApiResponse(responseCode = "200", description = "Rollos abiertos devueltos correctamente.")
+    @GetMapping("/inventario/enUso")
+    public ResponseEntity<List<EnUsoItemDTO>> listarEnUso(Authentication auth) {
+        Usuario usuario = usuarioAutenticado(auth);
+
+        List<EnUsoItemDTO> abiertos = inventarioService.listarEnUso(usuario).stream()
+                .map(uso -> new EnUsoItemDTO(uso.getId(), uso.getProducto(), uso.getGramosRestantes(), uso.getFechaApertura()))
+                .toList();
+
+        return ResponseEntity.ok(abiertos);
+    }
+
+    /**
+     * GET /inventario/resumen - cifras agregadas para el panel principal.
+     *
+     * @return 200 con el resumen calculado al vuelo (nada de esto se guarda).
+     */
+    @Operation(summary = "Devuelve las cifras agregadas del stock del usuario", description = "Rollos cerrados y abiertos, gramos disponibles, valor del inventario, ingresos por ventas y gramos consumidos.")
+    @ApiResponse(responseCode = "200", description = "Resumen calculado correctamente.")
+    @GetMapping("/inventario/resumen")
+    public ResponseEntity<ResumenDTO> resumen(Authentication auth) {
+        return ResponseEntity.ok(inventarioService.resumen(usuarioAutenticado(auth)));
+    }
+
+    /**
+     * Resuelve el Usuario real a partir del JWT ya verificado. orElseThrow()
+     * sin más: si el token es válido pero el usuario ya no existe en la BBDD
+     * (cuenta borrada), es un estado imposible en condiciones normales.
+     *
+     * @param auth autenticación que Spring Security dejó en la petición.
+     * @return el Usuario dueño de la sesión.
+     */
+    private Usuario usuarioAutenticado(Authentication auth) {
+        return usuarioRepository.findByUserName(auth.getName()).orElseThrow();
     }
 }

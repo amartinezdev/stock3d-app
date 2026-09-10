@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -67,4 +69,22 @@ public class UsuarioController {
         TokenResponseDTO token = usuarioService.verificar(loginDTO);
         return ResponseEntity.status(HttpStatus.OK).body(token);
     }
+
+    /**
+     * GET /me - quién soy. El frontend lo llama nada más arrancar con un
+     * token guardado: si responde 200, el token sigue siendo válido y de
+     * paso devuelve el rol real; si responde 401, toca volver al login.
+     *
+     * @param auth autenticación que Spring Security dejó en la petición a
+     *             partir del JWT (nunca un id que mande el cliente).
+     * @return 200 con los datos públicos del usuario autenticado.
+     */
+    @Operation(summary = "Devuelve los datos del usuario autenticado", description = "Sirve al frontend para comprobar que el token sigue siendo válido y conocer el rol real.")
+    @ApiResponse(responseCode = "200", description = "Datos del usuario devueltos correctamente.")
+    @ApiResponse(responseCode = "401", description = "No hay token, o el token no es válido / ha expirado.")
+    @GetMapping("/me")
+    public ResponseEntity<UsuarioResponseDTO> yo(Authentication auth) {
+        return ResponseEntity.ok(usuarioService.obtenerPorUserName(auth.getName()));
+    }
+
 }

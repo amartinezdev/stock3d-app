@@ -107,4 +107,22 @@ public class UsuarioService {
     }
 
 
+
+    /**
+     * Devuelve los datos públicos del usuario dueño de la sesión. Lo usa
+     * GET /me para que el frontend sepa a quién tiene delante (nombre y,
+     * sobre todo, rol) sin tener que fiarse de lo que haya guardado en el
+     * navegador: la fuente de verdad es siempre la BBDD.
+     *
+     * @param userName el username que venía dentro del JWT ya verificado.
+     * @return sus datos públicos, sin el hash de la contraseña.
+     */
+    public UsuarioResponseDTO obtenerPorUserName(String userName) {
+        Usuario usuario = usuarioRepository.findByUserName(userName)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+
+        return new UsuarioResponseDTO(usuario.getId(), usuario.getNombre(), usuario.getEmail(),
+                usuario.getUserName(), usuario.getRol());
+    }
+
 }
