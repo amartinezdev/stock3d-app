@@ -1,0 +1,89 @@
+<div class="marco" [class.menu-abierto]="menuAbierto()">
+  <!-- Capa oscura que aparece solo en móvil, al abrir el menú -->
+  <div class="velo" (click)="menuAbierto.set(false)" aria-hidden="true"></div>
+
+  <aside class="lateral">
+    <a class="marca" routerLink="/panel" (click)="menuAbierto.set(false)">
+      <span class="marca-icono">
+        <app-icono nombre="bobina" />
+      </span>
+      <span class="columna">
+        <strong>Stock3D</strong>
+        <span class="pequeno apagado">Gestión de filamento</span>
+      </span>
+    </a>
+
+    <nav class="navegacion" aria-label="Secciones">
+      @for (enlace of enlaces; track enlace.ruta) {
+        <a
+          class="nav-enlace"
+          [routerLink]="enlace.ruta"
+          routerLinkActive="activo"
+          (click)="menuAbierto.set(false)"
+        >
+          <app-icono [nombre]="enlace.icono" tamano="sm" />
+          {{ enlace.texto }}
+        </a>
+      }
+    </nav>
+
+    <div class="lateral-pie">
+      @if (auth.esAdmin()) {
+        <div class="aviso-admin">
+          <app-icono nombre="escudo" tamano="sm" />
+          <span class="pequeno">Sesión con permisos de administrador</span>
+        </div>
+      }
+
+      <div class="usuario">
+        <span class="avatar">{{ auth.iniciales() }}</span>
+        <span class="columna crece">
+          <strong class="pequeno">{{ auth.usuario()?.nombre }}</strong>
+          <span class="pequeno apagado">{{ auth.usuario()?.userName }}</span>
+        </span>
+        <button
+          type="button"
+          class="btn btn-fantasma btn-sm btn-icono"
+          (click)="auth.cerrarSesion()"
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+        >
+          <app-icono nombre="salir" tamano="sm" />
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="contenido">
+    <header class="cabecera">
+      <button
+        type="button"
+        class="btn btn-fantasma btn-icono solo-movil"
+        (click)="menuAbierto.set(!menuAbierto())"
+        aria-label="Abrir menú"
+      >
+        <app-icono nombre="menu" />
+      </button>
+
+      <span class="crece"></span>
+
+      <button
+        type="button"
+        class="btn btn-fantasma btn-icono"
+        (click)="tema.alternar()"
+        [attr.aria-label]="tema.tema() === 'oscuro' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+        [title]="tema.tema() === 'oscuro' ? 'Tema claro' : 'Tema oscuro'"
+      >
+        <app-icono [nombre]="tema.tema() === 'oscuro' ? 'sol' : 'luna'" />
+      </button>
+
+      <span class="badge" [class]="auth.esAdmin() ? 'badge-primario' : 'badge-neutro'">
+        {{ auth.usuario()?.rol }}
+      </span>
+    </header>
+
+    <main class="principal">
+      <router-outlet />
+    </main>
+  </div>
+</div>
