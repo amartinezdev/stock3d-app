@@ -197,7 +197,7 @@ backend vuelve a comprobar rol y propiedad en cada petición.
 
 ## 🧪 Tests
 
-**53 tests** en el backend, entre unitarios y de integración:
+**52 tests** en el backend, entre unitarios y de integración:
 
 ```bash
 cd backend && ./mvnw test
