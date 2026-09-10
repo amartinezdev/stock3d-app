@@ -1,0 +1,28 @@
+.barra-superior {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.filtro-categoria {
+  width: auto;
+  min-width: 13rem;
+}
+
+/* La descripción no debe empujar la tabla a lo ancho: se corta con puntos
+   suspensivos y el texto completo sigue estando en el DOM. */
+.descripcion {
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dos-columnas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 480px) {
+  .dos-columnas { grid-template-columns: 1fr; }
+}

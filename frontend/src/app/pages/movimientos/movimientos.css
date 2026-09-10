@@ -1,0 +1,4 @@
+/* La fecha completa no debe partirse en dos líneas dentro de su celda. */
+.nowrap {
+  white-space: nowrap;
+}

@@ -1,0 +1,240 @@
+<div class="pagina">
+  <header class="pagina-cabecera">
+    <div>
+      <h1>Catálogo</h1>
+      <p>Las fichas de filamento disponibles. El stock de cada uno va en tu inventario.</p>
+    </div>
+
+    @if (auth.esAdmin()) {
+      <button type="button" class="btn btn-primario" (click)="nuevoProducto()">
+        <app-icono nombre="mas" tamano="sm" />
+        Nuevo producto
+      </button>
+    }
+  </header>
+
+  <section class="tarjeta">
+    <div class="tarjeta-cabecera barra-superior">
+      <div class="fila">
+        <app-icono nombre="filtro" tamano="sm" />
+        <select
+          class="select filtro-categoria"
+          [value]="categoria() ?? ''"
+          (change)="cambiarCategoria($any($event.target).value)"
+          aria-label="Filtrar por categoría"
+        >
+          <option value="">Todas las categorías</option>
+          @for (item of categorias; track item) {
+            <option [value]="item">{{ item | categoria }}</option>
+          }
+        </select>
+      </div>
+
+      <span class="badge badge-neutro">{{ total() }} producto(s)</span>
+    </div>
+
+    @if (cargando()) {
+      <div class="tarjeta-cuerpo columna" style="gap: 0.75rem">
+        @for (hueco of [1, 2, 3, 4, 5]; track hueco) {
+          <div class="esqueleto" style="height: 2.5rem"></div>
+        }
+      </div>
+    } @else if (productos().length === 0) {
+      <div class="vacio">
+        <span class="vacio-icono">
+          <app-icono nombre="catalogo" tamano="lg" />
+        </span>
+        @if (categoria()) {
+          <h3>No hay productos de esta categoría</h3>
+          <p>Cambia el filtro para ver el resto del catálogo.</p>
+        } @else {
+          <h3>El catálogo está vacío</h3>
+          <p>
+            @if (auth.esAdmin()) {
+              Crea el primer producto para que todo el mundo pueda añadirlo a su inventario.
+            } @else {
+              Todavía no hay productos. Un administrador tiene que crearlos.
+            }
+          </p>
+        }
+      </div>
+    } @else {
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th class="oculto-movil">Descripción</th>
+              <th>Categoría</th>
+              <th class="derecha">Peso rollo</th>
+              <th class="derecha">Precio</th>
+              @if (auth.esAdmin()) {
+                <th></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (producto of productos(); track producto.id) {
+              <tr>
+                <td><strong>{{ producto.nombre }}</strong></td>
+                <td class="oculto-movil apagado descripcion">{{ producto.descripcion }}</td>
+                <td>
+                  <span class="badge badge-primario">{{ producto.categoria | categoria }}</span>
+                </td>
+                <td class="derecha numero">{{ producto.pesoRollo | gramos }}</td>
+                <td class="derecha numero">{{ producto.precio | currency: 'EUR' }}</td>
+                @if (auth.esAdmin()) {
+                  <td>
+                    <div class="tabla-acciones">
+                      <button
+                        type="button"
+                        class="btn btn-fantasma btn-sm btn-icono"
+                        (click)="editarProducto(producto)"
+                        [attr.aria-label]="'Editar ' + producto.nombre"
+                        title="Editar"
+                      >
+                        <app-icono nombre="lapiz" tamano="sm" />
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-fantasma btn-sm btn-icono"
+                        (click)="aBorrar.set(producto)"
+                        [attr.aria-label]="'Borrar ' + producto.nombre"
+                        title="Borrar"
+                      >
+                        <app-icono nombre="papelera" tamano="sm" />
+                      </button>
+                    </div>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <app-paginacion
+        [pagina]="pagina()"
+        [totalPaginas]="totalPaginas()"
+        [totalElementos]="total()"
+        [tamano]="tamano"
+        (irA)="irAPagina($event)"
+      />
+    }
+  </section>
+</div>
+
+<!-- ---------- Diálogo: crear / editar producto ---------- -->
+@if (dialogoAbierto()) {
+  <app-dialogo
+    [titulo]="editando() ? 'Editar producto' : 'Nuevo producto'"
+    descripcion="Ficha del filamento en el catálogo compartido."
+    (cerrar)="dialogoAbierto.set(false)"
+  >
+    <form [formGroup]="formulario" class="columna" style="gap: 1rem" novalidate>
+      <div class="campo">
+        <label class="etiqueta" for="p-nombre">Nombre</label>
+        <input
+          id="p-nombre"
+          class="input"
+          type="text"
+          placeholder="PLA Negro Mate 1,75 mm"
+          formControlName="nombre"
+        />
+        @if (formulario.controls.nombre.touched && formulario.controls.nombre.invalid) {
+          <span class="mensaje-error">Escribe un nombre (mínimo 2 caracteres).</span>
+        }
+      </div>
+
+      <div class="campo">
+        <label class="etiqueta" for="p-descripcion">Descripción</label>
+        <input
+          id="p-descripcion"
+          class="input"
+          type="text"
+          placeholder="Acabado mate, buena adherencia"
+          formControlName="descripcion"
+        />
+        @if (formulario.controls.descripcion.touched && formulario.controls.descripcion.invalid) {
+          <span class="mensaje-error">La descripción es obligatoria.</span>
+        }
+      </div>
+
+      <div class="campo">
+        <label class="etiqueta" for="p-categoria">Categoría</label>
+        <select id="p-categoria" class="select" formControlName="categoria">
+          @for (item of categorias; track item) {
+            <option [value]="item">{{ item | categoria }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="dos-columnas">
+        <div class="campo">
+          <label class="etiqueta" for="p-precio">Precio de referencia (€)</label>
+          <input
+            id="p-precio"
+            class="input"
+            type="number"
+            min="0"
+            step="0.01"
+            formControlName="precio"
+          />
+          @if (formulario.controls.precio.touched && formulario.controls.precio.invalid) {
+            <span class="mensaje-error">No puede ser negativo.</span>
+          }
+        </div>
+
+        <div class="campo">
+          <label class="etiqueta" for="p-peso">Gramos por rollo</label>
+          <input id="p-peso" class="input" type="number" min="1" step="1" formControlName="pesoRollo" />
+          @if (formulario.controls.pesoRollo.touched && formulario.controls.pesoRollo.invalid) {
+            <span class="mensaje-error">Tiene que ser mayor que 0.</span>
+          }
+        </div>
+      </div>
+    </form>
+
+    <div pie>
+      <button type="button" class="btn btn-contorno" (click)="dialogoAbierto.set(false)">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="btn btn-primario"
+        [disabled]="enviando() || formulario.invalid"
+        (click)="guardar()"
+      >
+        @if (enviando()) {
+          <app-icono nombre="bobina" tamano="sm" [girando]="true" />
+        }
+        {{ editando() ? 'Guardar cambios' : 'Crear producto' }}
+      </button>
+    </div>
+  </app-dialogo>
+}
+
+<!-- ---------- Diálogo: confirmar borrado ---------- -->
+@if (aBorrar(); as producto) {
+  <app-dialogo titulo="Borrar producto" (cerrar)="aBorrar.set(null)">
+    <p class="pequeno">
+      Vas a borrar <strong>{{ producto.nombre }}</strong> del catálogo. Esta acción no se
+      puede deshacer.
+    </p>
+
+    <div pie>
+      <button type="button" class="btn btn-contorno" (click)="aBorrar.set(null)">Cancelar</button>
+      <button
+        type="button"
+        class="btn btn-peligro"
+        [disabled]="enviando()"
+        (click)="confirmarBorrado()"
+      >
+        @if (enviando()) {
+          <app-icono nombre="bobina" tamano="sm" [girando]="true" />
+        }
+        Sí, borrar
+      </button>
+    </div>
+  </app-dialogo>
+}

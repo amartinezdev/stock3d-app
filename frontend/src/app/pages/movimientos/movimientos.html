@@ -1,0 +1,122 @@
+<div class="pagina">
+  <header class="pagina-cabecera">
+    <div>
+      <h1>Movimientos</h1>
+      <p>Todo lo que ha entrado y salido de tu stock, en orden.</p>
+    </div>
+
+    <div class="segmentos" role="group" aria-label="Filtrar por tipo">
+      <button type="button" [class.activo]="tipo() === null" (click)="filtrarPor(null)">
+        Todos
+      </button>
+      <button type="button" [class.activo]="tipo() === 'ENTRADA'" (click)="filtrarPor('ENTRADA')">
+        Entradas
+      </button>
+      <button
+        type="button"
+        [class.activo]="tipo() === 'SALIDA_VENTA'"
+        (click)="filtrarPor('SALIDA_VENTA')"
+      >
+        Ventas
+      </button>
+      <button
+        type="button"
+        [class.activo]="tipo() === 'SALIDA_USO'"
+        (click)="filtrarPor('SALIDA_USO')"
+      >
+        Consumos
+      </button>
+    </div>
+  </header>
+
+  <section class="tarjeta">
+    @if (cargando()) {
+      <div class="tarjeta-cuerpo columna" style="gap: 0.75rem">
+        @for (hueco of [1, 2, 3, 4, 5, 6]; track hueco) {
+          <div class="esqueleto" style="height: 2.25rem"></div>
+        }
+      </div>
+    } @else if (movimientos().length === 0) {
+      <div class="vacio">
+        <span class="vacio-icono">
+          <app-icono nombre="historial" tamano="lg" />
+        </span>
+        @if (tipo()) {
+          <h3>No hay movimientos de este tipo</h3>
+          <p>Prueba a quitar el filtro para ver el histórico completo.</p>
+        } @else {
+          <h3>Todavía no hay movimientos</h3>
+          <p>
+            Cada entrada, venta o consumo que registres se apunta aquí automáticamente,
+            con su fecha y su cantidad. No se puede editar ni borrar: es el registro de
+            lo que ya pasó.
+          </p>
+        }
+      </div>
+    } @else {
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Producto</th>
+              <th class="oculto-movil">Categoría</th>
+              <th class="derecha">Cantidad</th>
+              <th class="derecha oculto-movil">Precio unidad</th>
+              <th class="derecha">Importe</th>
+              <th class="derecha">Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (movimiento of movimientos(); track movimiento.id) {
+              <tr>
+                <td>
+                  <span class="badge" [class]="claseTipo(movimiento.tipo)">
+                    <app-icono [nombre]="iconoTipo(movimiento.tipo)" tamano="sm" />
+                    {{ etiquetaTipo(movimiento.tipo) }}
+                  </span>
+                </td>
+                <td>{{ movimiento.producto.nombre }}</td>
+                <td class="oculto-movil apagado">
+                  {{ movimiento.producto.categoria | categoria }}
+                </td>
+                <td class="derecha numero">
+                  @if (movimiento.tipo === 'SALIDA_USO') {
+                    {{ movimiento.cantidad | gramos }}
+                  } @else {
+                    {{ movimiento.cantidad | number: '1.0-0' }} rollo(s)
+                  }
+                </td>
+                <td class="derecha oculto-movil numero apagado">
+                  @if (movimiento.precio !== null) {
+                    {{ movimiento.precio | currency: 'EUR' }}
+                  } @else {
+                    —
+                  }
+                </td>
+                <td class="derecha numero">
+                  @if (movimiento.precio !== null) {
+                    <strong>{{ (movimiento.precio ?? 0) * movimiento.cantidad | currency: 'EUR' }}</strong>
+                  } @else {
+                    <span class="apagado">—</span>
+                  }
+                </td>
+                <td class="derecha apagado nowrap">
+                  {{ movimiento.fecha | date: 'd MMM yyyy, HH:mm' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <app-paginacion
+        [pagina]="pagina()"
+        [totalPaginas]="totalPaginas()"
+        [totalElementos]="total()"
+        [tamano]="tamano"
+        (irA)="irAPagina($event)"
+      />
+    }
+  </section>
+</div>
