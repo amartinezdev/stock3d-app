@@ -1,0 +1,187 @@
+<div class="acceso">
+  <section class="escaparate" aria-hidden="true">
+    <div class="trama"></div>
+
+    <div class="escaparate-contenido">
+      <div class="marca">
+        <span class="marca-icono">
+          <app-icono nombre="bobina" />
+        </span>
+        <strong>Stock3D</strong>
+      </div>
+
+      <div>
+        <h2 class="titular">
+          Deja de contar rollos<br />
+          <span class="acento">a ojo.</span>
+        </h2>
+        <p class="subtitular">
+          Cada cuenta tiene su propio inventario: lo que registres aquí es tuyo y solo tú
+          lo ves.
+        </p>
+      </div>
+
+      <div class="vitrina">
+        <div class="vt-tarjeta vt-principal">
+          <div class="vt-cabecera">
+            <span>Material en uso</span>
+            <span class="vt-etiqueta">3 rollos</span>
+          </div>
+
+          <div class="vt-fila">
+            <span class="vt-bobina"></span>
+            <span class="vt-datos">
+              <span class="vt-nombre">PLA Negro Mate</span>
+              <span class="vt-barra"><i style="width: 64%"></i></span>
+            </span>
+            <span class="vt-gramos">639 g</span>
+          </div>
+
+          <div class="vt-fila">
+            <span class="vt-bobina ambar"></span>
+            <span class="vt-datos">
+              <span class="vt-nombre">PLA+ Rojo Cereza</span>
+              <span class="vt-barra ambar"><i style="width: 21%"></i></span>
+            </span>
+            <span class="vt-gramos">210 g</span>
+          </div>
+        </div>
+
+        <div class="vt-tarjeta vt-flotante">
+          <span>Consumido este mes</span>
+          <strong>1,24 kg</strong>
+          <span class="vt-subida">en 9 movimientos</span>
+        </div>
+      </div>
+
+      <div class="pastillas">
+        <span>Spring Boot 4</span>
+        <span>Angular 22</span>
+        <span>PostgreSQL</span>
+        <span>JWT</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel-formulario">
+    <div class="caja">
+      <div class="marca marca-movil">
+        <span class="marca-icono">
+          <app-icono nombre="bobina" />
+        </span>
+        <strong>Stock3D</strong>
+      </div>
+
+      <div class="tarjeta-acceso">
+        <header>
+          <h1>Crear cuenta</h1>
+          <p class="apagado pequeno">Es gratis y tarda menos de un minuto.</p>
+        </header>
+
+        @if (error(); as mensaje) {
+          <div class="alerta" role="alert">
+            <app-icono nombre="alerta" tamano="sm" />
+            <span>{{ mensaje }}</span>
+          </div>
+        }
+
+        <form [formGroup]="formulario" (ngSubmit)="enviar()" novalidate>
+          <div class="campo">
+            <label class="etiqueta" for="nombre">Nombre</label>
+            <input
+              id="nombre"
+              class="input"
+              type="text"
+              autocomplete="name"
+              placeholder="Álvaro Martínez"
+              formControlName="nombre"
+              [class.error]="formulario.controls.nombre.touched && formulario.controls.nombre.invalid"
+            />
+            @if (formulario.controls.nombre.touched && formulario.controls.nombre.invalid) {
+              <span class="mensaje-error">Escribe tu nombre (mínimo 2 caracteres).</span>
+            }
+          </div>
+
+          <div class="campo">
+            <label class="etiqueta" for="email">Email</label>
+            <input
+              id="email"
+              class="input"
+              type="email"
+              autocomplete="email"
+              placeholder="tu@correo.com"
+              formControlName="email"
+              [class.error]="formulario.controls.email.touched && formulario.controls.email.invalid"
+            />
+            @if (formulario.controls.email.touched && formulario.controls.email.invalid) {
+              <span class="mensaje-error">Escribe un email válido.</span>
+            }
+          </div>
+
+          <div class="campo">
+            <label class="etiqueta" for="userName">Usuario</label>
+            <input
+              id="userName"
+              class="input"
+              type="text"
+              autocomplete="username"
+              placeholder="alvaro3d"
+              formControlName="userName"
+              [class.error]="formulario.controls.userName.touched && formulario.controls.userName.invalid"
+            />
+            @if (formulario.controls.userName.touched && formulario.controls.userName.invalid) {
+              <span class="mensaje-error">Mínimo 3 caracteres.</span>
+            }
+          </div>
+
+          <div class="campo">
+            <label class="etiqueta" for="password">Contraseña</label>
+            <input
+              id="password"
+              class="input"
+              type="password"
+              autocomplete="new-password"
+              placeholder="••••••••"
+              formControlName="password"
+              [class.error]="formulario.controls.password.touched && formulario.controls.password.invalid"
+            />
+            @if (formulario.controls.password.touched && formulario.controls.password.invalid) {
+              <span class="mensaje-error">Mínimo 6 caracteres.</span>
+            }
+          </div>
+
+          <div class="campo">
+            <label class="etiqueta" for="repetir">Repetir contraseña</label>
+            <input
+              id="repetir"
+              class="input"
+              type="password"
+              autocomplete="new-password"
+              placeholder="••••••••"
+              formControlName="repetir"
+              [class.error]="formulario.controls.repetir.touched && formulario.hasError('noCoinciden')"
+            />
+            @if (formulario.controls.repetir.touched && formulario.hasError('noCoinciden')) {
+              <span class="mensaje-error">Las contraseñas no coinciden.</span>
+            }
+          </div>
+
+          <button type="submit" class="btn btn-primario btn-bloque" [disabled]="cargando()">
+            @if (cargando()) {
+              <app-icono nombre="bobina" tamano="sm" [girando]="true" />
+              Creando cuenta…
+            } @else {
+              Crear cuenta
+            }
+          </button>
+        </form>
+
+        <div class="separador">¿Ya tienes cuenta?</div>
+
+        <a class="btn btn-contorno btn-bloque" routerLink="/login">Iniciar sesión</a>
+      </div>
+
+      <p class="pie-legal">Tu contraseña se guarda cifrada con BCrypt. Nunca en texto plano.</p>
+    </div>
+  </section>
+</div>

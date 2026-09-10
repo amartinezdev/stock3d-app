@@ -1,0 +1,345 @@
+/* =====================================================================
+   Pantallas de acceso (login y registro comparten este archivo).
+
+   Composición a dos columnas: a la izquierda un "escaparate" de marca con
+   una maqueta del producto, a la derecha el formulario dentro de una
+   tarjeta. En móvil el escaparate desaparece y queda solo el formulario.
+   ===================================================================== */
+
+.acceso {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  min-height: 100dvh;
+  background: hsl(var(--fondo));
+}
+
+/* ---------------------------------------------------------------------
+   Panel izquierdo: siempre oscuro, también con el tema claro activado.
+   Los colores van escritos aquí y no como tokens a propósito: es una
+   pieza de marca, y debe verse igual en los dos temas.
+   --------------------------------------------------------------------- */
+.escaparate {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 3.5rem;
+  color: #f4f4f5;
+  background:
+    radial-gradient(90% 70% at 15% 5%, hsl(262 85% 58% / 0.35), transparent 60%),
+    radial-gradient(70% 60% at 90% 95%, hsl(199 89% 48% / 0.28), transparent 65%),
+    linear-gradient(160deg, #16121f 0%, #0b0a10 55%, #0a0a0f 100%);
+}
+
+/* Rejilla técnica de fondo, muy tenue: da textura sin robar atención.
+   Se desvanece hacia los bordes con una máscara radial. */
+.trama {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(hsl(0 0% 100% / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(0 0% 100% / 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(75% 65% at 30% 40%, #000 30%, transparent 100%);
+}
+
+.escaparate-contenido {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  width: 100%;
+  max-width: 30rem;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.marca-icono {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  flex: none;
+  border-radius: 0.7rem;
+  color: #fff;
+  background: linear-gradient(135deg, hsl(262 90% 65%), hsl(272 85% 48%));
+  box-shadow: 0 8px 20px -8px hsl(262 90% 60% / 0.9);
+}
+
+.marca strong {
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.titular {
+  font-size: clamp(1.9rem, 3.2vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  margin-bottom: 0.85rem;
+}
+
+/* La segunda mitad del titular en degradado: un acento de color sin
+   recurrir a otra fuente ni a más peso tipográfico. */
+.acento {
+  background: linear-gradient(100deg, hsl(262 90% 72%), hsl(199 90% 62%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subtitular {
+  color: hsl(240 5% 72%);
+  font-size: 0.95rem;
+  max-width: 26rem;
+}
+
+/* ---------------------------------------------------------------------
+   Maqueta del producto: dos tarjetas de cristal con datos de ejemplo.
+   Es decorativa (el bloque entero va con aria-hidden), pero enseña de un
+   vistazo qué hace la aplicación mejor que cualquier lista de ventajas.
+   --------------------------------------------------------------------- */
+.vitrina {
+  position: relative;
+  /* Hueco reservado para la tarjeta flotante, que sobresale por abajo. */
+  padding-bottom: 5.25rem;
+}
+
+.vt-tarjeta {
+  border: 1px solid hsl(0 0% 100% / 0.12);
+  border-radius: 0.9rem;
+  background: hsl(240 12% 10% / 0.72);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 24px 48px -20px hsl(0 0% 0% / 0.85);
+}
+
+.vt-principal {
+  padding: 0.9rem 1rem 1rem;
+  transform: perspective(1200px) rotateY(-6deg) rotateX(2deg);
+}
+
+.vt-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.7rem;
+  margin-bottom: 0.7rem;
+  border-bottom: 1px solid hsl(0 0% 100% / 0.08);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: hsl(240 5% 60%);
+}
+
+.vt-etiqueta {
+  padding: 0.1rem 0.45rem;
+  border-radius: 99px;
+  background: hsl(262 85% 60% / 0.2);
+  color: hsl(262 90% 80%);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.vt-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0;
+}
+
+/* Bobina dibujada con dos círculos concéntricos y un degradado cónico:
+   el carrete visto de frente. */
+.vt-bobina {
+  width: 2.1rem;
+  height: 2.1rem;
+  flex: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #16121f 0 26%, transparent 27%),
+    conic-gradient(from 210deg, hsl(262 85% 62%), hsl(199 89% 60%), hsl(262 85% 62%));
+  box-shadow: inset 0 0 0 1px hsl(0 0% 100% / 0.14);
+}
+
+.vt-bobina.ambar {
+  background:
+    radial-gradient(circle, #16121f 0 26%, transparent 27%),
+    conic-gradient(from 210deg, hsl(38 95% 60%), hsl(14 90% 58%), hsl(38 95% 60%));
+}
+
+.vt-datos {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.vt-nombre {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.vt-barra {
+  height: 0.25rem;
+  border-radius: 99px;
+  background: hsl(0 0% 100% / 0.1);
+  overflow: hidden;
+}
+
+.vt-barra i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, hsl(262 85% 62%), hsl(199 89% 60%));
+}
+
+.vt-barra.ambar i {
+  background: linear-gradient(90deg, hsl(38 95% 60%), hsl(0 84% 62%));
+}
+
+.vt-gramos {
+  font-size: 0.75rem;
+  color: hsl(240 5% 65%);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Tarjeta pequeña superpuesta a la grande, desplazada hacia fuera: es lo
+   que da sensación de profundidad a la composición. */
+.vt-flotante {
+  position: absolute;
+  right: -2rem;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.8rem 1rem;
+  animation: flotar 6s ease-in-out infinite;
+}
+
+.vt-flotante span {
+  font-size: 0.7rem;
+  color: hsl(240 5% 62%);
+}
+
+.vt-flotante strong {
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.vt-subida {
+  color: hsl(152 60% 58%) !important;
+  font-weight: 500;
+}
+
+@keyframes flotar {
+  50% { transform: translateY(-8px); }
+}
+
+/* Sello inferior con la pila tecnológica. */
+.pastillas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pastillas span {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid hsl(0 0% 100% / 0.14);
+  border-radius: 99px;
+  font-size: 0.72rem;
+  color: hsl(240 5% 72%);
+}
+
+/* ---------------------------------------------------------------------
+   Panel derecho: el formulario
+   --------------------------------------------------------------------- */
+.panel-formulario {
+  display: grid;
+  place-items: center;
+  padding: 2rem 1.5rem;
+  background: hsl(var(--superficie));
+}
+
+.caja {
+  width: min(24rem, 100%);
+}
+
+.marca-movil {
+  display: none;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.tarjeta-acceso {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.75rem;
+  background: hsl(var(--tarjeta));
+  border: 1px solid hsl(var(--borde));
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-md);
+}
+
+.tarjeta-acceso h1 {
+  font-size: 1.35rem;
+}
+
+.tarjeta-acceso header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tarjeta-acceso form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Línea con texto centrado ("¿Nuevo por aquí?") hecha con dos reglas
+   flexibles a los lados, sin imágenes ni pseudoelementos rígidos. */
+.separador {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: hsl(var(--apagado-texto));
+}
+
+.separador::before,
+.separador::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: hsl(var(--borde));
+}
+
+.enlace {
+  color: hsl(var(--primario));
+  font-weight: 500;
+}
+
+.enlace:hover {
+  text-decoration: underline;
+}
+
+.pie-legal {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.72rem;
+  color: hsl(var(--apagado-texto));
+}
+
+@media (max-width: 980px) {
+  .acceso { grid-template-columns: 1fr; }
+  .escaparate { display: none; }
+  .marca-movil { display: flex; }
+  .panel-formulario { background: hsl(var(--fondo)); }
+}
