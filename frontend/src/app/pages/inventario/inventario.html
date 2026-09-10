@@ -1,0 +1,248 @@
+<div class="pagina">
+  <header class="pagina-cabecera">
+    <div>
+      <h1>Inventario</h1>
+      <p>Rollos cerrados que tienes en casa, listos para abrir o vender.</p>
+    </div>
+
+    <button type="button" class="btn btn-primario" (click)="abrirDialogoEntrada()">
+      <app-icono nombre="mas" tamano="sm" />
+      Registrar entrada
+    </button>
+  </header>
+
+  <section class="tarjeta">
+    <div class="tarjeta-cabecera barra-superior">
+      <div class="input-con-icono buscador">
+        <app-icono nombre="buscar" tamano="sm" />
+        <input
+          class="input"
+          type="search"
+          placeholder="Buscar por producto o categoría…"
+          [value]="busqueda()"
+          (input)="busqueda.set($any($event.target).value)"
+          aria-label="Buscar en el inventario"
+        />
+      </div>
+
+      <div class="fila envuelve">
+        <span class="badge badge-neutro">{{ totalRollos() }} rollo(s)</span>
+        <span class="badge badge-exito">{{ valorTotal() | currency: 'EUR' }}</span>
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <div class="tarjeta-cuerpo columna" style="gap: 0.75rem">
+        @for (hueco of [1, 2, 3, 4, 5]; track hueco) {
+          <div class="esqueleto" style="height: 2.5rem"></div>
+        }
+      </div>
+    } @else if (filtrados().length === 0) {
+      <div class="vacio">
+        <span class="vacio-icono">
+          <app-icono nombre="caja" tamano="lg" />
+        </span>
+        @if (busqueda()) {
+          <h3>Ningún producto coincide con "{{ busqueda() }}"</h3>
+          <p>Prueba con otro nombre o borra el filtro.</p>
+        } @else {
+          <h3>Tu inventario está vacío</h3>
+          <p>
+            Registra una entrada para añadir rollos cerrados. Después podrás abrirlos
+            para consumir gramos, o venderlos enteros.
+          </p>
+          <button
+            type="button"
+            class="btn btn-primario"
+            style="margin-top: 0.5rem"
+            (click)="abrirDialogoEntrada()"
+          >
+            <app-icono nombre="mas" tamano="sm" />
+            Registrar entrada
+          </button>
+        }
+      </div>
+    } @else {
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th class="oculto-movil">Peso por rollo</th>
+              <th class="derecha">Precio ref.</th>
+              <th class="derecha">Rollos</th>
+              <th class="derecha oculto-movil">Valor</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtrados(); track item.id) {
+              <tr>
+                <td>
+                  <div class="columna">
+                    <strong>{{ item.producto.nombre }}</strong>
+                    <span class="badge badge-primario ancho-badge">
+                      {{ item.producto.categoria | categoria }}
+                    </span>
+                  </div>
+                </td>
+                <td class="oculto-movil apagado numero">{{ item.producto.pesoRollo | gramos }}</td>
+                <td class="derecha numero">{{ item.producto.precio | currency: 'EUR' }}</td>
+                <td class="derecha">
+                  <span class="badge" [class]="item.cantidad <= 2 ? 'badge-aviso' : 'badge-neutro'">
+                    {{ item.cantidad }}
+                  </span>
+                </td>
+                <td class="derecha oculto-movil numero">
+                  {{ item.cantidad * item.producto.precio | currency: 'EUR' }}
+                </td>
+                <td>
+                  <div class="tabla-acciones">
+                    <button
+                      type="button"
+                      class="btn btn-contorno btn-sm"
+                      [disabled]="abriendo() !== null"
+                      (click)="abrirRollo(item)"
+                    >
+                      <app-icono
+                        nombre="caja-abierta"
+                        tamano="sm"
+                        [girando]="abriendo() === item.id"
+                      />
+                      Abrir
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-contorno btn-sm"
+                      (click)="abrirDialogoVenta(item)"
+                    >
+                      <app-icono nombre="etiqueta" tamano="sm" />
+                      Vender
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>
+
+<!-- ---------- Diálogo: registrar entrada ---------- -->
+@if (dialogoEntrada()) {
+  <app-dialogo
+    titulo="Registrar entrada"
+    descripcion="Añade rollos cerrados a tu inventario."
+    (cerrar)="dialogoEntrada.set(false)"
+  >
+    <form [formGroup]="formularioEntrada" class="columna" style="gap: 1rem" novalidate>
+      <div class="campo">
+        <label class="etiqueta" for="productoId">Producto</label>
+        <select id="productoId" class="select" formControlName="productoId">
+          <option [ngValue]="null" disabled>Elige un producto del catálogo…</option>
+          @for (producto of productos(); track producto.id) {
+            <option [ngValue]="producto.id">
+              {{ producto.nombre }} · {{ producto.categoria | categoria }} ·
+              {{ producto.pesoRollo | gramos }}
+            </option>
+          }
+        </select>
+        @if (productos().length === 0) {
+          <span class="ayuda">
+            El catálogo está vacío. Un administrador tiene que crear productos primero.
+          </span>
+        }
+      </div>
+
+      <div class="campo">
+        <label class="etiqueta" for="cantidad">Cantidad de rollos</label>
+        <input id="cantidad" class="input" type="number" min="1" step="1" formControlName="cantidad" />
+        @if (formularioEntrada.controls.cantidad.touched && formularioEntrada.controls.cantidad.invalid) {
+          <span class="mensaje-error">Tiene que ser al menos 1 rollo.</span>
+        }
+      </div>
+    </form>
+
+    <div pie>
+      <button type="button" class="btn btn-contorno" (click)="dialogoEntrada.set(false)">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="btn btn-primario"
+        [disabled]="enviando() || formularioEntrada.invalid"
+        (click)="guardarEntrada()"
+      >
+        @if (enviando()) {
+          <app-icono nombre="bobina" tamano="sm" [girando]="true" />
+        }
+        Guardar entrada
+      </button>
+    </div>
+  </app-dialogo>
+}
+
+<!-- ---------- Diálogo: vender ---------- -->
+@if (filaVenta(); as item) {
+  <app-dialogo
+    titulo="Vender rollos"
+    [descripcion]="item.producto.nombre + ' · ' + item.cantidad + ' disponible(s)'"
+    (cerrar)="filaVenta.set(null)"
+  >
+    <form [formGroup]="formularioVenta" class="columna" style="gap: 1rem" novalidate>
+      <div class="campo">
+        <label class="etiqueta" for="venta-cantidad">Rollos a vender</label>
+        <input
+          id="venta-cantidad"
+          class="input"
+          type="number"
+          min="1"
+          step="1"
+          [max]="item.cantidad"
+          formControlName="cantidad"
+        />
+        @if (formularioVenta.controls.cantidad.invalid && formularioVenta.controls.cantidad.touched) {
+          <span class="mensaje-error">Entre 1 y {{ item.cantidad }} rollos.</span>
+        }
+      </div>
+
+      <div class="campo">
+        <label class="etiqueta" for="venta-precio">Precio por rollo (€)</label>
+        <input
+          id="venta-precio"
+          class="input"
+          type="number"
+          min="0.01"
+          step="0.01"
+          formControlName="precio"
+        />
+        <span class="ayuda">
+          Se propone el precio del catálogo, pero puedes cambiarlo: se guarda el precio
+          real de esta venta.
+        </span>
+      </div>
+
+      <div class="total-venta">
+        <span class="pequeno apagado">Total de la venta</span>
+        <strong class="numero">{{ totalVenta() | currency: 'EUR' }}</strong>
+      </div>
+    </form>
+
+    <div pie>
+      <button type="button" class="btn btn-contorno" (click)="filaVenta.set(null)">Cancelar</button>
+      <button
+        type="button"
+        class="btn btn-primario"
+        [disabled]="enviando() || formularioVenta.invalid"
+        (click)="guardarVenta()"
+      >
+        @if (enviando()) {
+          <app-icono nombre="bobina" tamano="sm" [girando]="true" />
+        }
+        Registrar venta
+      </button>
+    </div>
+  </app-dialogo>
+}

@@ -1,0 +1,184 @@
+<div class="pagina">
+  <header class="pagina-cabecera">
+    <div>
+      <h1>Material en uso</h1>
+      <p>Lo que tienes ya empezado, con los gramos que quedan de cada uno.</p>
+    </div>
+
+    <div class="fila envuelve">
+      <span class="badge badge-info">{{ gramosTotales() | gramos }} disponibles</span>
+      <div class="segmentos" role="group" aria-label="Filtrar rollos">
+        <button
+          type="button"
+          [class.activo]="filtro() === 'activos'"
+          (click)="filtro.set('activos')"
+        >
+          Activos ({{ activos().length }})
+        </button>
+        <button
+          type="button"
+          [class.activo]="filtro() === 'agotados'"
+          (click)="filtro.set('agotados')"
+        >
+          Agotados ({{ agotados().length }})
+        </button>
+        <button type="button" [class.activo]="filtro() === 'todos'" (click)="filtro.set('todos')">
+          Todos
+        </button>
+      </div>
+    </div>
+  </header>
+
+  @if (cargando()) {
+    <div class="rejilla rejilla-3">
+      @for (hueco of [1, 2, 3]; track hueco) {
+        <div class="tarjeta tarjeta-cuerpo">
+          <div class="esqueleto" style="height: 1rem; width: 60%"></div>
+          <div class="esqueleto" style="height: 2.5rem; margin-top: 1rem"></div>
+        </div>
+      }
+    </div>
+  } @else if (visibles().length === 0) {
+    <div class="tarjeta">
+      <div class="vacio">
+        <span class="vacio-icono">
+          <app-icono nombre="bobina" tamano="lg" />
+        </span>
+        @if (filtro() === 'agotados') {
+          <h3>No hay rollos agotados</h3>
+          <p>Aquí aparecerán los rollos que hayas gastado por completo.</p>
+        } @else {
+          <h3>No tienes ningún rollo abierto</h3>
+          <p>
+            Los rollos se abren desde el inventario: al abrir uno se descuenta del stock
+            cerrado y aparece aquí con su peso completo, listo para ir gastándolo.
+          </p>
+          <a class="btn btn-primario" style="margin-top: 0.5rem" routerLink="/inventario">
+            <app-icono nombre="caja-abierta" tamano="sm" />
+            Ir al inventario
+          </a>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="rejilla rejilla-3">
+      @for (rollo of visibles(); track rollo.id) {
+        <article class="tarjeta rollo" [class.agotado]="rollo.gramosRestantes <= 0">
+          <div class="rollo-cabecera">
+            <div class="columna crece">
+              <strong>{{ rollo.producto.nombre }}</strong>
+              <span class="pequeno apagado">
+                Abierto el {{ rollo.fechaApertura | date: 'd MMM yyyy' }}
+              </span>
+            </div>
+            <span class="badge badge-primario">{{ rollo.producto.categoria | categoria }}</span>
+          </div>
+
+          <div class="rollo-cifras">
+            <div class="columna">
+              <span class="restante numero">{{ rollo.gramosRestantes | gramos }}</span>
+              <span class="pequeno apagado">
+                de {{ rollo.producto.pesoRollo | gramos }} · {{ rollo.porcentaje }}%
+              </span>
+            </div>
+            <div class="columna derecha">
+              <span class="pequeno numero">{{ valorRestante(rollo) | currency: 'EUR' }}</span>
+              <span class="pequeno apagado">valor restante</span>
+            </div>
+          </div>
+
+          <div class="progreso">
+            <div
+              class="progreso-barra"
+              [class.bajo]="rollo.porcentaje < 25"
+              [style.width.%]="rollo.porcentaje"
+            ></div>
+          </div>
+
+          @if (rollo.gramosRestantes > 0) {
+            <button
+              type="button"
+              class="btn btn-contorno btn-bloque btn-sm"
+              (click)="abrirDialogoConsumo(rollo)"
+            >
+              <app-icono nombre="menos" tamano="sm" />
+              Consumir gramos
+            </button>
+          } @else {
+            <span class="badge badge-neutro auto-ancho">
+              <app-icono nombre="check" tamano="sm" />
+              Rollo agotado
+            </span>
+          }
+        </article>
+      }
+    </div>
+  }
+</div>
+
+<!-- ---------- Diálogo: consumir gramos ---------- -->
+@if (rolloConsumo(); as rollo) {
+  <app-dialogo
+    titulo="Consumir gramos"
+    [descripcion]="rollo.producto.nombre"
+    (cerrar)="rolloConsumo.set(null)"
+  >
+    <form [formGroup]="formularioConsumo" class="columna" style="gap: 1rem" novalidate>
+      <div class="resumen-rollo">
+        <div class="fila-sep">
+          <span class="pequeno apagado">Quedan ahora</span>
+          <strong class="numero">{{ rollo.gramosRestantes | gramos }}</strong>
+        </div>
+        <div class="progreso" style="margin-top: 0.5rem">
+          <div class="progreso-barra" [style.width.%]="rollo.porcentaje"></div>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label class="etiqueta" for="gramos">Gramos a consumir</label>
+        <input
+          id="gramos"
+          class="input"
+          type="number"
+          min="0.01"
+          step="0.01"
+          [max]="rollo.gramosRestantes"
+          formControlName="gramos"
+        />
+        @if (formularioConsumo.controls.gramos.invalid && formularioConsumo.controls.gramos.touched) {
+          <span class="mensaje-error">
+            Tiene que ser mayor que 0 y como mucho {{ rollo.gramosRestantes }} g.
+          </span>
+        }
+      </div>
+
+      <div class="fila envuelve">
+        @for (atajo of atajos; track atajo) {
+          <button type="button" class="btn btn-contorno btn-sm" (click)="ponerGramos(atajo)">
+            {{ atajo }} g
+          </button>
+        }
+        <button type="button" class="btn btn-contorno btn-sm" (click)="consumirTodo()">
+          Todo el rollo
+        </button>
+      </div>
+    </form>
+
+    <div pie>
+      <button type="button" class="btn btn-contorno" (click)="rolloConsumo.set(null)">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="btn btn-primario"
+        [disabled]="enviando() || formularioConsumo.invalid"
+        (click)="guardarConsumo()"
+      >
+        @if (enviando()) {
+          <app-icono nombre="bobina" tamano="sm" [girando]="true" />
+        }
+        Consumir
+      </button>
+    </div>
+  </app-dialogo>
+}
