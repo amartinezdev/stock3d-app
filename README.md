@@ -1,152 +1,328 @@
 # 🧵 Stock3D — Gestión de stock de filamento 3D
 
-Proyecto personal full-stack para gestionar el inventario de filamento de
-impresión 3D de cada usuario: qué tiene en stock, qué rollos tiene abiertos
-y cuánto ha consumido o vendido, con autenticación, roles y un histórico
-de movimientos auditable.
+Aplicación full-stack para llevar el inventario de filamento de impresión 3D: qué rollos
+tienes cerrados, cuáles has abierto y cuántos gramos les quedan, qué has vendido y a qué
+precio, con un histórico auditable de cada movimiento.
 
-Construido para consolidar y demostrar conocimientos prácticos de
-**Spring Boot** en el backend y **Angular** en el frontend, siguiendo el
-flujo habitual de la industria: primero se cierra y se prueba la API REST,
-después se construye la interfaz que la consume.
+**Spring Boot 4 + Angular 22 + PostgreSQL**, con autenticación JWT, roles, tests y
+despliegue en contenedores.
 
----
-
-## 🎯 Qué resuelve
-
-Cada usuario lleva su propio inventario de filamento (no es un stock
-global): cuántos rollos cerrados tiene de cada producto, qué rollos tiene
-abiertos y con cuántos gramos restantes, y un registro inmutable de cada
-entrada, venta o consumo — pensado para poder responder preguntas como
-"¿cuánto he vendido este mes?" o "¿qué le pasó a este rollo?" sin recalcular
-ni fiarse de un campo que alguien pudo olvidar actualizar.
+![Panel principal](capturas/panel.png)
 
 ---
 
-## 🛠️ Stack tecnológico
+## 📑 Índice
+
+- [Qué problema resuelve](#-qué-problema-resuelve)
+- [Stack](#️-stack)
+- [Capturas](#-capturas)
+- [Funcionalidades](#-funcionalidades)
+- [Arquitectura](#️-arquitectura)
+- [Decisiones de diseño](#-decisiones-de-diseño)
+- [Tests](#-tests)
+- [Cómo ejecutarlo en local](#-cómo-ejecutarlo-en-local)
+- [Despliegue](#-despliegue)
+- [Estructura del repositorio](#-estructura-del-repositorio)
+
+---
+
+## 🎯 Qué problema resuelve
+
+Quien imprime en 3D con cierta frecuencia acaba con un problema tonto pero real: rollos
+a medias por todas partes, sin saber cuánto queda en cada uno ni cuánto material lleva
+gastado. Un Excel se desincroniza a la primera.
+
+Stock3D modela eso como lo que es, tres cosas distintas:
+
+- Un **catálogo compartido** de productos (la ficha del filamento: precio de referencia,
+  gramos por rollo, categoría).
+- Un **inventario por usuario** — rollos cerrados y rollos abiertos con sus gramos
+  restantes. El stock nunca es global: cada cuenta ve solo el suyo.
+- Un **histórico inmutable** de movimientos: entradas, ventas y consumos, con fecha y
+  autoría, que permite responder "¿cuánto vendí este mes?" o "¿qué pasó con este rollo?"
+  sin recalcular nada ni fiarse de un campo que alguien olvidó actualizar.
+
+---
+
+## 🛠️ Stack
 
 **Backend**
-- Java 25 · Spring Boot 4
-- Spring Data JPA (Hibernate) · PostgreSQL
-- Spring Security + JWT (`io.jsonwebtoken`) · BCrypt
-- Bean Validation (`@Valid`)
-- Maven
+Java 25 · Spring Boot 4.1 · Spring Data JPA (Hibernate) · Spring Security + JWT (jjwt) ·
+BCrypt · Bean Validation · Flyway · springdoc-openapi · Maven
 
-**Frontend** *(en desarrollo)*
-- Angular · TypeScript
+**Frontend**
+Angular 22 (standalone, signals, zoneless) · TypeScript · formularios reactivos ·
+`HttpClient` con interceptor · guards de ruta · CSS propio con tokens de diseño, sin
+librerías de UI
 
-**Herramientas**
-- Docker (PostgreSQL en contenedor) · Postman
+**Infraestructura**
+PostgreSQL 16 · Docker + Docker Compose · Caddy (proxy inverso con HTTPS automático)
+
+**Testing**
+JUnit 5 · Mockito · `@SpringBootTest` + MockMvc · Vitest
+
+---
+
+## 📸 Capturas
+
+| Inventario | Material en uso |
+|---|---|
+| ![Inventario](capturas/inventario.png) | ![Material en uso](capturas/en-uso.png) |
+
+| Histórico de movimientos | Tema claro |
+|---|---|
+| ![Movimientos](capturas/movimientos.png) | ![Tema claro](capturas/panel-tema-claro.png) |
+
+<details>
+<summary>Ver también: acceso, alta de cuenta y versión móvil</summary>
+
+| Iniciar sesión | Crear cuenta |
+|---|---|
+| ![Inicio de sesión](capturas/login.png) | ![Alta de cuenta](capturas/registro.png) |
+
+La interfaz se adapta a móvil con la barra lateral convertida en cajón:
+
+<img src="capturas/movil.png" width="300" alt="Vista móvil del panel">
+
+</details>
 
 ---
 
 ## ✅ Funcionalidades
 
-- **Autenticación JWT** con roles (`ADMIN` / `USER`) y endpoints protegidos
-  por rol y por ruta.
-- **Contraseñas cifradas con BCrypt** — nunca se guarda ni se compara texto
-  plano.
-- **Catálogo de productos** (CRUD) con control de acceso: cualquier
-  autenticado puede consultar, solo `ADMIN` puede crear/editar/borrar.
-- **Stock personal por usuario**: altas de rollos cerrados, apertura de
-  rollos, consumo parcial por gramos y venta de rollos enteros a precio
-  libre.
-- **Histórico de movimientos inmutable** (entradas, ventas, consumos) para
-  auditoría y estadísticas, separado del estado mutable actual.
-- **Paginación y filtrado** en los listados (`Page`/`Pageable`, filtro
-  opcional por categoría).
-- **Manejo global de errores** (`@RestControllerAdvice`): toda excepción de
-  negocio o de validación responde con un formato de error consistente.
-- **Protección contra IDOR**: cualquier operación sobre un recurso
-  identificado por id comprueba que ese recurso pertenece de verdad al
-  usuario autenticado, no al que el cliente diga ser.
-- **DTOs de entrada y salida**: el cliente nunca puede enviar campos que no
-  debería decidir (id, rol, u otro usuario), y las respuestas nunca filtran
-  datos sensibles (el hash de la contraseña jamás viaja en un JSON).
+**Seguridad y cuentas**
+- Registro y login con **JWT**; contraseñas cifradas con **BCrypt**, nunca en texto plano.
+- **Roles** `ADMIN` / `USER`, con endpoints protegidos por rol *y* por método HTTP.
+- **Protección contra IDOR**: toda operación sobre un recurso con id comprueba que ese
+  recurso sea del usuario autenticado, y responde 404 (no 403) para no revelar siquiera
+  que existe.
+- El usuario y el rol salen siempre del token ya verificado, nunca del cuerpo de la
+  petición: es imposible actuar en nombre de otra persona.
+
+**Gestión de stock**
+- Catálogo de productos con CRUD completo, restringido a `ADMIN`.
+- Entradas de rollos cerrados, apertura de rollos, consumo por gramos y venta de rollos
+  enteros a precio libre.
+- Validaciones de negocio reales: no se puede abrir un rollo que no tienes, ni consumir
+  más gramos de los que quedan, ni vender más de lo que hay.
+- Panel con métricas agregadas y gráfico de consumo de los últimos 14 días.
+- Histórico paginado y filtrable por tipo de movimiento.
+
+**Calidad de la API**
+- **DTOs de entrada y salida**: el cliente no puede enviar campos que no le corresponden
+  (id, rol), y ninguna respuesta filtra datos sensibles — el hash de la contraseña no
+  aparece en ningún JSON.
+- **Paginación y filtros** con `Page`/`Pageable`.
+- **Manejo global de errores** (`@RestControllerAdvice`): todo fallo, de negocio o de
+  validación, sale con el mismo formato.
+- **Documentación OpenAPI** navegable con Swagger UI, deshabilitada en producción.
 
 ---
 
 ## 🏗️ Arquitectura
 
 ```
-Controller (HTTP)  →  Service (lógica de negocio)  →  Repository (datos)  →  PostgreSQL
+                 ┌──────────────── Navegador ─────────────────┐
+                 │  Angular 22 (SPA)                          │
+                 │  signals · guards · interceptor JWT        │
+                 └────────────────────┬───────────────────────┘
+                                      │ HTTPS
+                 ┌────────────────────▼───────────────────────┐
+                 │  Caddy — proxy inverso + TLS automático    │
+                 │   /        → estáticos de Angular          │
+                 │   /api/*   → API (quitando el prefijo)     │
+                 └────────────────────┬───────────────────────┘
+                                      │
+      ┌───────────────────────────────▼───────────────────────────────┐
+      │  Spring Boot                                                  │
+      │  Controller  →  Service  →  Repository                        │
+      │   (HTTP)        (negocio)     (datos)                         │
+      │       ▲ JwtAuthFilter + SecurityFilterChain                   │
+      └───────────────────────────────┬───────────────────────────────┘
+                                      │
+                            ┌─────────▼─────────┐
+                            │   PostgreSQL 16   │
+                            │  esquema: Flyway  │
+                            └───────────────────┘
 ```
 
-Separación estricta de responsabilidades: el Controller traduce HTTP ↔ Java
-y no conoce reglas de negocio; el Service las aplica sin saber nada de HTTP
-(nada de `ResponseEntity` ahí dentro); el Repository solo lee/escribe.
+Separación estricta de capas: el **Controller** traduce HTTP ↔ Java y no contiene reglas
+de negocio; el **Service** las aplica sin saber que existe HTTP (ni un `ResponseEntity`
+ahí dentro); el **Repository** solo lee y escribe.
 
-**Decisiones de diseño destacadas:**
-- El catálogo compartido (`Producto`) está separado del stock por usuario
-  (`Inventario`, `EnUso`): el mismo producto puede tener cantidades
-  distintas para cada usuario.
-- Estado mutable (`Inventario`, `EnUso` — "cómo estamos ahora") y
-  registro inmutable (`Movimiento` — "qué pasó") se modelan como cosas
-  distintas: nada se sobreescribe, nada se recalcula a partir de un dato
-  que podría desincronizarse.
-- `BigDecimal` para dinero y para gramos, evitando los errores de
-  redondeo de la coma flotante binaria.
-- Nada de datos derivados guardados "por si acaso" (p. ej. si un rollo
-  está agotado se consulta, no se almacena un booleano aparte).
+### Modelo de dominio
+
+```
+Usuario ──┬── Inventario  (rollos cerrados)  ──┐
+          │                                    │      Producto
+          ├── EnUso       (rollos abiertos)  ──┼───►  catálogo compartido:
+          │                                    │      precio de referencia,
+          └── Movimiento  (histórico)        ──┘      gramos/rollo, categoría
+```
+
+---
+
+## 💡 Decisiones de diseño
+
+Las que más me han hecho pensar, y por qué:
+
+**Estado mutable e histórico son cosas distintas.** `Inventario` y `EnUso` responden a
+"cómo estoy ahora" y se modifican; `Movimiento` responde a "qué pasó" y no se edita
+nunca. Mezclarlos habría hecho imposible auditar.
+
+**Nada de datos derivados guardados "por si acaso".** No hay un booleano `agotado` en
+`EnUso`: se consulta si `gramosRestantes <= 0`. Un dato duplicado es un dato que algún
+día se desincroniza.
+
+**`BigDecimal`, no `double`.** Tanto para dinero como para gramos: la coma flotante
+binaria no representa 0,1 exactamente, y en un inventario eso acaba en descuadres.
+
+**El precio de una venta no es el precio del catálogo.** El catálogo guarda una
+referencia; cada movimiento de venta guarda el precio real de esa transacción concreta.
+
+**Flyway + `ddl-auto=validate`.** El esquema se versiona en migraciones y Hibernate solo
+comprueba que coincida, sin permiso para improvisar sobre la base de datos de producción.
+
+**Abrir un rollo no genera un movimiento.** No es una entrada ni una salida: el material
+sigue siendo tuyo, solo cambia de estado. Registrarlo habría ensuciado las estadísticas.
+
+**El frontend llama a `/api`, una ruta relativa.** El mismo build vale en local y en
+producción, y al ser siempre el mismo origen, CORS deja de ser un problema en lugar de
+convertirse en la fuente habitual de errores.
+
+**El frontend nunca es la barrera de seguridad.** Oculta lo que no puedes usar, pero el
+backend vuelve a comprobar rol y propiedad en cada petición.
+
+---
+
+## 🧪 Tests
+
+**53 tests** en el backend, entre unitarios y de integración:
+
+```bash
+cd backend && ./mvnw test
+```
+
+- **Unitarios** (JUnit + Mockito) sobre los Services: reglas de negocio aisladas, sin
+  base de datos — stock negativo, consumo mayor que lo disponible, duplicados al
+  registrarse.
+- **Integración** (`@SpringBootTest` + MockMvc sobre H2): la cadena completa, seguridad
+  incluida. Cubren que un endpoint sin token responde 403, que uno de `ADMIN` rechaza a
+  un `USER`, y que **ningún listado deja ver el stock de otro usuario**.
+
+Frontend, con Vitest: `cd frontend && npm test`.
 
 ---
 
 ## 🚀 Cómo ejecutarlo en local
 
-**Requisitos:** JDK 21+, PostgreSQL 16 (o Docker), Maven (incluido el
-wrapper `mvnw`, no hace falta instalarlo aparte).
+**Requisitos:** JDK 21+, Node.js LTS y PostgreSQL 16 (o Docker).
+
+<details open>
+<summary><b>Opción A — Todo con Docker (un comando)</b></summary>
 
 ```bash
-# 1. Levantar PostgreSQL (opción con Docker)
-docker run --name postgres-stock -e POSTGRES_PASSWORD=<tu_password> -p 5432:5432 -d postgres:16
-
-# 2. Crear la base de datos
-docker exec -it postgres-stock psql -U postgres -c "CREATE DATABASE stockdb;"
-
-# 3. Variables de entorno necesarias
-#    DB_USERNAME, DB_PASSWORD  -> credenciales de PostgreSQL
-#    JWT_SECRET                -> cadena de 32+ caracteres para firmar los JWT
-
-# 4. Arrancar la API (desde /backend)
-./mvnw spring-boot:run
+cp .env.example .env     # rellena las contraseñas y el JWT_SECRET
+docker compose up -d --build
 ```
 
-La API queda disponible en `http://localhost:8080`. `POST /registrar` y
-`POST /login` son los únicos endpoints públicos; el resto exige un JWT en
-la cabecera `Authorization: Bearer <token>`.
+Aplicación en `http://localhost`. Levanta los tres contenedores (web, API y base de
+datos) con el mismo montaje que en producción.
+
+</details>
+
+<details>
+<summary><b>Opción B — Modo desarrollo, con recarga automática</b></summary>
+
+```bash
+# 1. PostgreSQL
+docker run --name postgres-stock -e POSTGRES_PASSWORD=<password> -p 5432:5432 -d postgres:16
+docker exec -it postgres-stock psql -U postgres -c "CREATE DATABASE stockdb;"
+
+# 2. Variables de entorno del backend
+export DB_USERNAME=postgres
+export DB_PASSWORD=<password>
+export JWT_SECRET=<cadena de 32+ caracteres>
+
+# 3. API  →  http://localhost:8080
+cd backend && ./mvnw spring-boot:run
+
+# 4. Frontend  →  http://localhost:4200   (en otra terminal)
+cd frontend && npm install && npm start
+```
+
+El servidor de desarrollo de Angular hace de proxy y reenvía `/api/*` al 8080, así que
+tampoco hay peticiones entre orígenes mientras se desarrolla.
+
+Documentación de la API: `http://localhost:8080/swagger-ui.html`.
+
+</details>
+
+> El primer usuario se registra desde la web y nace como `USER`. Para probar el CRUD del
+> catálogo hace falta un `ADMIN`:
+> `UPDATE usuario SET rol = 'ADMIN' WHERE user_name = '<tu_usuario>';` y volver a iniciar
+> sesión, porque el rol viaja dentro del token.
 
 ---
 
-## 📋 Organización del trabajo: Sprints
+## 🌐 Despliegue
 
-El desarrollo se ha organizado en sprints autogestionados, con un objetivo
-concreto y entregable por sprint — misma disciplina que un Scrum real,
-adaptada a un equipo de una persona.
+`docker compose up -d --build` sobre cualquier VPS. Tres contenedores:
 
-### Backend — completado
-
-| Sprint | Objetivo | Entregado |
+| Servicio | Qué hace | Expuesto |
 |---|---|---|
-| **1** | Primer proyecto Spring Boot funcionando | Estructura del proyecto, primer endpoint, primer commit |
-| **2** | API REST de verdad | CRUD de productos en memoria, verbos HTTP, códigos de estado |
-| **3** | Persistencia | Primera entidad JPA, `JpaRepository`, base de datos en memoria (H2) |
-| **4** | Base de datos real | PostgreSQL, configuración por variables de entorno |
-| **5** | Arquitectura en capas | Capa de Service, DTOs, validación con `@Valid`, manejo global de errores |
-| **6** | Usuarios y seguridad | Entidad `Usuario`, BCrypt, Spring Security, registro/login, JWT, roles |
-| **7** | Dominio de stock completo | `Inventario`, `EnUso`, `Movimiento`; entradas, apertura de rollo, consumo, venta; paginación y filtros |
+| `web` | Caddy: sirve el Angular compilado, reparte `/api` y gestiona el certificado | 80, 443 |
+| `api` | El `.jar` de Spring Boot sobre un JRE mínimo | red interna |
+| `db` | PostgreSQL con volumen persistente | red interna |
 
-### Backlog
+Puntos a destacar del montaje:
 
-| Sprint | Objetivo |
-|---|---|
-| **8** | Tests (JUnit/Mockito, `@SpringBootTest`), migraciones con Flyway, documentación con Swagger/OpenAPI, perfiles `dev`/`prod`, despliegue |
-| **9** | Frontend Angular: proyecto base, componentes, consumo de la API con `HttpClient` |
-| **10** | Routing y formularios reactivos (alta/edición de productos) |
-| **11** | Autenticación en el frontend: login, interceptors, guards por rol |
-| **12** | Interfaz completa de inventario y movimientos de stock |
+- **La base de datos y la API no se publican a internet.** La única puerta de entrada es
+  el proxy.
+- **HTTPS automático**: al indicar un dominio real en `DOMINIO`, Caddy solicita y renueva
+  el certificado de Let's Encrypt sin configuración adicional.
+- **Imágenes multi-etapa**: se compila con el JDK y con Node, pero la imagen final solo
+  lleva el JRE y los estáticos. Ni código fuente ni herramientas de build en producción.
+- **La API corre como usuario sin privilegios**, no como root.
+- **Cero secretos en el repositorio**: toda la configuración entra por variables de
+  entorno, y `.env.example` documenta cuáles sin revelar ninguna.
+
+---
+
+## 📁 Estructura del repositorio
+
+```
+├── backend/                  API REST (Spring Boot)
+│   ├── src/main/java/…/
+│   │   ├── controller/       Endpoints HTTP
+│   │   ├── service/          Lógica de negocio
+│   │   ├── repository/       Acceso a datos (Spring Data JPA)
+│   │   ├── model/            Entidades JPA
+│   │   ├── dto/              Contratos de entrada y salida
+│   │   ├── security/         JWT: filtro y utilidades
+│   │   ├── config/           Spring Security, CORS
+│   │   └── exception/        Manejo global de errores
+│   ├── src/main/resources/db/migration/   Migraciones Flyway
+│   ├── src/test/             Tests unitarios y de integración
+│   └── Dockerfile
+├── frontend/                 SPA (Angular)
+│   ├── src/app/
+│   │   ├── pages/            Una carpeta por pantalla
+│   │   ├── components/       Reutilizables: diálogo, iconos, paginación
+│   │   ├── services/         Llamadas a la API y estado de sesión
+│   │   ├── guards/           Protección de rutas
+│   │   ├── interceptors/     Inyección del JWT
+│   │   ├── models/           Interfaces espejo de los DTOs
+│   │   └── layout/           Barra lateral y cabecera
+│   ├── Caddyfile
+│   └── Dockerfile
+├── capturas/
+├── docker-compose.yml
+└── .env.example
+```
 
 ---
 
 ## 📄 Licencia
 
-Proyecto personal con fines de aprendizaje y demostración de habilidades.
+Proyecto personal, desarrollado como pieza de portfolio.
